@@ -6,6 +6,7 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import CountryPill from "@/components/CountryPill";
 import OverlayMenu from "@/components/OverlayMenu";
+import { useAuthStore } from "@/store/authStore"; // Import store
 
 const COUNTRIES = [
   { code: "ID", label: "Indonesia" },
@@ -56,6 +57,7 @@ export default function LandingPage() {
     { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Logout", onClick: () => setLoggedIn(false) },
+    
   ];
 
   const menuItems = loggedIn ? authMenu : guestMenu;

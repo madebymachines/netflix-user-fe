@@ -1,46 +1,75 @@
-"use client";
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import MobileShell from "@/components/MobileShell";
-import Header from "@/components/Header";
-import OverlayMenu from "@/components/OverlayMenu";
+'use client';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import axios, { AxiosError } from 'axios';
+import MobileShell from '@/components/MobileShell';
+import Header from '@/components/Header';
+import OverlayMenu from '@/components/OverlayMenu';
+
+const otpSchema = z.object({
+  otp: z.string().length(6, 'OTP must be 6 digits'),
+});
+
+type OtpFormInputs = z.infer<typeof otpSchema>;
+
+interface ApiErrorResponse {
+  message: string;
+}
 
 export default function VerifyOtpPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [otp, setOtp] = useState("");
+  const [apiError, setApiError] = useState<string | null>(null); // State untuk error API
   const CONTENT_H = 590;
 
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "diwotten.25@gmail.com";
+  const email = searchParams.get('email') || '';
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm<OtpFormInputs>({
+    resolver: zodResolver(otpSchema),
+    mode: 'onChange',
+  });
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = "hidden";
+    if (menuOpen) document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
 
   const guestMenu = [
-    { label: "Home", href: "/" },
-    { label: "Sign In", href: "/sign-in" },
-    { label: "Register", href: "/register" },
+    { label: 'Home', href: '/' },
+    { label: 'Sign In', href: '/sign-in' },
+    { label: 'Register', href: '/register' },
   ];
 
-  const onChangeOtp = (v: string) => {
-    const next = v.replace(/\D/g, "").slice(0, 6);
-    setOtp(next);
-  };
-
-  const isValid = /^\d{6}$/.test(otp);
-
-  const onVerify = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit: SubmitHandler<OtpFormInputs> = async (data) => {
     if (!isValid) return;
-    // TODO: panggil API verifikasi kamu
-    alert(`Verifikasi OTP ${otp} untuk ${email}`);
+    setApiError(null); // Bersihkan error sebelumnya
+    try {
+      await axios.post('http://localhost:3000/v1/auth/verify-email', {
+        email,
+        otp: data.otp,
+      });
+      alert('Verification successful! You can now log in.');
+      router.push('/sign-in');
+    } catch (error) {
+      if (axios.isAxiosError<ApiErrorResponse>(error)) {
+        setApiError(error.response?.data?.message || 'Verification failed');
+      } else {
+        setApiError('An unexpected error occurred. Please try again.');
+      }
+    }
   };
 
   return (
@@ -54,7 +83,7 @@ export default function VerifyOtpPage() {
           alt=""
           fill
           sizes="360px"
-          style={{ objectFit: "cover", objectPosition: "top" }}
+          style={{ objectFit: 'cover', objectPosition: 'top' }}
           className="opacity-25"
           priority
         />
@@ -67,32 +96,42 @@ export default function VerifyOtpPage() {
         </h1>
 
         <p className="text-center text-[12px] leading-snug opacity-90 mb-6">
-          We have sent you an OTP via Email, to{" "}
+          We have sent you an OTP via Email, to{' '}
           <span className="font-semibold underline">{email}</span> check your
           inbox &amp; spam folder and enter the code below.
         </p>
 
-        <form onSubmit={onVerify} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <input
-            value={otp}
-            onChange={(e) => onChangeOtp(e.target.value)}
+            {...register('otp')}
             inputMode="numeric"
             pattern="[0-9]*"
+            maxLength={6}
             placeholder="Enter OTP here"
             className="w-full bg-transparent border-b border-white/40 px-0 py-3 placeholder-white/40
                        focus:outline-none focus:border-white text-[16px] tracking-[0.2em]"
           />
+          {errors.otp && (
+            <p className="text-red-500 text-xs mt-1">{errors.otp.message}</p>
+          )}
 
           <div className="text-[12px]">
-            Did not receive the OTP?{" "}
+            Did not receive the OTP?{' '}
             <button
               type="button"
-              onClick={() => alert("Resend code")}
+              onClick={() => alert('Resend code')}
               className="underline"
             >
               Resend Code
             </button>
           </div>
+
+          {/* Menampilkan error API di sini */}
+          {apiError && (
+            <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
+              {apiError}
+            </div>
+          )}
 
           <button
             type="submit"
@@ -100,8 +139,8 @@ export default function VerifyOtpPage() {
             className={`w-full rounded-md py-3 font-bold transition
               ${
                 isValid
-                  ? "bg-white text-black"
-                  : "bg-white/20 text-white/60 cursor-not-allowed"
+                  ? 'bg-white text-black'
+                  : 'bg-white/20 text-white/60 cursor-not-allowed'
               }`}
           >
             Verify
