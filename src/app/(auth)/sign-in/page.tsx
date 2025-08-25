@@ -53,10 +53,8 @@ export default function SignInPage() {
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
     setApiError(null);
     try {
-      const response = await api.post<{ user: User }>(
-        process.env.NEXT_PUBLIC_API_URL + '/auth/login',
-        data
-      );
+      // baseURL sudah di-setting di instance axios, jadi tidak perlu ditulis lagi
+      const response = await api.post<{ user: User }>('/auth/login', data);
 
       setUser(response.data.user);
 

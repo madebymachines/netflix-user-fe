@@ -9,25 +9,21 @@ export default function ProtectedRoute({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    const check = async () => {
-      console.log('wkwk');
-      await checkAuth();
-      if (!isLoading && !isAuthenticated) {
-        console.log('wkwk2');
+    if (!user) {
+      checkAuth();
+    }
+  }, [checkAuth]);
 
-        router.replace('/sign-in');
-      }
-    };
-
-    check();
-    // Jika pengecekan selesai dan pengguna tidak terautentikasi, redirect
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/sign-in');
+    }
   }, [isAuthenticated, isLoading, router]);
 
-  // Selama loading, atau jika tidak terautentikasi, tampilkan loading/null
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-black text-white">

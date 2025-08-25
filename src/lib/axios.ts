@@ -10,8 +10,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Cek jika error adalah 401 dan request belum pernah di-retry
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Cek jika error adalah 401, request belum di-retry, dan BUKAN dari endpoint login
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest.url !== '/auth/login'
+    ) {
       originalRequest._retry = true;
       try {
         // Panggil endpoint refresh-tokens
@@ -20,8 +24,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         // Jika refresh token gagal, arahkan ke halaman login
-        // Ini akan terjadi jika refresh token juga sudah expired
-        // atau tidak valid
         if (typeof window !== 'undefined') {
           window.location.href = '/sign-in';
         }
