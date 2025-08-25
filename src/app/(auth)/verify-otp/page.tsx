@@ -57,7 +57,7 @@ export default function VerifyOtpPage() {
     if (!isValid) return;
     setApiError(null); // Bersihkan error sebelumnya
     try {
-      await axios.post('http://localhost:3000/v1/auth/verify-email', {
+      await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/verify-email', {
         email,
         otp: data.otp,
       });

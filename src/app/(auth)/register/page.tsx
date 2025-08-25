@@ -59,10 +59,10 @@ export default function RegisterPage() {
   ];
 
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
-    setApiError(null);  
+    setApiError(null);
     try {
       const response = await axios.post(
-        'http://localhost:3000/v1/auth/register',
+        process.env.NEXT_PUBLIC_API_URL + '/auth/register',
         {
           name: data.name,
           username: data.username,
@@ -71,7 +71,7 @@ export default function RegisterPage() {
           phoneNumber: data.phoneNumber,
         }
       );
- 
+
       router.push(`/verify-otp?email=${data.email}`);
     } catch (error) {
       if (axios.isAxiosError<ApiErrorResponse>(error)) {
@@ -216,7 +216,7 @@ export default function RegisterPage() {
               {errors.agree.message}
             </p>
           )}
- 
+
           {apiError && (
             <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
               {apiError}
