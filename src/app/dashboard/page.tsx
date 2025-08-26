@@ -4,9 +4,11 @@ import Image from "next/image";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
+import { useAuthStore } from "@/store/authStore";
 
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isLoading } = useAuthStore();
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -18,7 +20,12 @@ export default function DashboardPage() {
 
   const CONTENT_H = 590;
 
-  const user = { name: "DWI OTTEN", points: 18308, photoUrl: "" };
+  const userDisplayData = {
+    name: user?.name || "User",
+    username: user?.username || "username",
+    points: 18308,
+    photoUrl: "",
+  };
   const stats = [
     { value: 154, l1: "COMPLETED", l2: "CHALLENGE" },
     { value: 10986, l1: "SQUAT", l2: "REPETITION" },
@@ -37,6 +44,18 @@ export default function DashboardPage() {
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Logout", onClick: () => alert("Logout…") },
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MobileShell
@@ -101,7 +120,7 @@ export default function DashboardPage() {
               }}
             >
               <Image
-                src={user.photoUrl || "/images/bottle.png"}
+                src={userDisplayData.photoUrl || "/images/bottle.png"}
                 alt="User"
                 fill
                 sizes="120px"
@@ -124,12 +143,12 @@ export default function DashboardPage() {
 
           <div className="flex-1 h-[116px] flex flex-col justify-center pl-2">
             <div className="font-heading text-[12px] tracking-[.02em] leading-none">
-              {user.name}
+              {userDisplayData.name}
             </div>
             <div className="flex items-end gap-2">
               <div className="leading-none">
                 <div className="font-heading tabular-nums text-[30px] text-red-500 leading-none">
-                  {Intl.NumberFormat("id-ID").format(user.points)}
+                  {Intl.NumberFormat("id-ID").format(userDisplayData.points)}
                 </div>
                 <div className="font-heading text-[9px] uppercase tracking-widest text-red-500">
                   Physical Points

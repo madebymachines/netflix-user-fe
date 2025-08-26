@@ -5,6 +5,8 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import { Pencil } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
+import api from "@/lib/axios";
 
 type FormState = {
   fullName: string;
@@ -17,16 +19,26 @@ const CONTENT_H = 590;
 
 export default function ProfilePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, isLoading, setUser } = useAuthStore();
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const initial: FormState = {
-    fullName: "DWI OTTEN",
-    username: "dwiotten",
-    email: "dwiotten.25@gmail.com",
-    phone: "+65 123456789",
-  };
+  // Initialize form with user data from auth store
+  const getInitialFormState = (): FormState => ({
+    fullName: user?.name || "",
+    username: user?.username || "",
+    email: user?.email || "",
+    phone: user?.phoneNumber || "",
+  });
 
-  const [form, setForm] = useState<FormState>(initial);
+  const [form, setForm] = useState<FormState>(getInitialFormState());
   const [avatarUrl, setAvatarUrl] = useState<string>("");
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      setForm(getInitialFormState());
+    }
+  }, [user]);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
   const onPickAvatar = () => fileRef.current?.click();
@@ -48,10 +60,51 @@ export default function ProfilePage() {
     };
   }, [menuOpen]);
 
-  const onCancel = () => setForm(initial);
-  const onUpdate = () => {
-    // TODO: kirim ke backend
-    alert("Profile updated (mock).");
+  const onCancel = () => setForm(getInitialFormState());
+
+  const onUpdate = async () => {
+    if (!user) return;
+
+    // Basic validation
+    if (!form.fullName.trim()) {
+      alert("Full name is required");
+      return;
+    }
+    if (!form.username.trim()) {
+      alert("Username is required");
+      return;
+    }
+    if (!form.email.trim()) {
+      alert("Email is required");
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // Prepare update data
+      const updateData = {
+        name: form.fullName.trim(),
+        username: form.username.trim(),
+        email: form.email.trim(),
+        phoneNumber: form.phone.trim() || undefined,
+      };
+
+      // Send update request to backend
+      const response = await api.put(`/users/${user.id}`, updateData);
+
+      // Update user data in auth store
+      setUser(response.data);
+
+      alert("Profile updated successfully!");
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to update profile. Please try again."
+      );
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const authMenu = [
@@ -60,6 +113,18 @@ export default function ProfilePage() {
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Logout", onClick: () => alert("Logout…") },
   ];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-black text-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MobileShell
@@ -129,22 +194,26 @@ export default function ProfilePage() {
             label="Full Name"
             value={form.fullName}
             onChange={(v) => setForm((s) => ({ ...s, fullName: v }))}
+            required
           />
           <Field
             label="Username"
             value={form.username}
             onChange={(v) => setForm((s) => ({ ...s, username: v }))}
+            required
           />
           <Field
             label="Email"
             value={form.email}
             onChange={(v) => setForm((s) => ({ ...s, email: v }))}
             type="email"
+            required
           />
           <Field
             label="Phone Number"
             value={form.phone}
             onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
+            placeholder="Optional"
           />
         </div>
 
@@ -157,9 +226,10 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={onUpdate}
-            className="h-[48px] rounded-md bg-white text-black font-heading tracking-[.02em]"
+            disabled={isUpdating}
+            className="h-[48px] rounded-md bg-white text-black font-heading tracking-[.02em] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            UPDATE
+            {isUpdating ? "UPDATING..." : "UPDATE"}
           </button>
         </div>
       </div>
@@ -179,22 +249,30 @@ function Field({
   value,
   onChange,
   type = "text",
+  required = false,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
-      <div className="text-[12px] mb-1 opacity-80">{label}</div>
+      <div className="text-[12px] mb-1 opacity-80">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </div>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full bg-transparent border-b border-white/30 px-0 py-2 placeholder-white/40
                    focus:outline-none focus:border-white text-[14px]"
-        placeholder={label}
+        placeholder={placeholder || label}
+        required={required}
       />
     </label>
   );
