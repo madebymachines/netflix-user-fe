@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import Image from "next/image";
 import { ChevronsDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -6,8 +7,7 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import CountryPill from "@/components/CountryPill";
 import OverlayMenu from "@/components/OverlayMenu";
-import { useAuthStore } from "@/store/authStore"; // Import store
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const COUNTRIES = [
   { code: "ID", label: "Indonesia" },
@@ -32,9 +32,8 @@ export default function LandingPage() {
   const [country, setCountry] = useState<string | null>(null);
   const unlocked = !!country;
 
-  const [loggedIn, setLoggedIn] = useState(false);
-
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -48,19 +47,11 @@ export default function LandingPage() {
   const moreRef = useRef<HTMLDivElement | null>(null);
   const goMore = () => moreRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const guestMenu = [
+  const menuItems = [
     { label: "Home", href: "/" },
     { label: "Sign In", href: "/sign-in" },
-    { label: "Register", href: "/register" },
-  ];
-  const authMenu = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
-    { label: "Logout", onClick: () => setLoggedIn(false) },
   ];
-
-  const menuItems = loggedIn ? authMenu : guestMenu;
 
   return (
     <>
@@ -83,6 +74,7 @@ export default function LandingPage() {
           ) : null
         }
       >
+        {/* BG bola */}
         <div className="absolute top-0 left-0 w-full h-[420px]">
           <Image
             src="/images/ball.png"
@@ -94,7 +86,9 @@ export default function LandingPage() {
           />
         </div>
 
+        {/* HERO content */}
         <div className="absolute inset-0 z-20">
+          {/* pill country saat sudah pilih */}
           {unlocked && (
             <div className="absolute left-1/2 -translate-x-1/2 top-4 z-30">
               <CountryPill
@@ -107,6 +101,19 @@ export default function LandingPage() {
           )}
 
           <div
+            className="absolute left-1/2 -translate-x-1/2 z-20"
+            style={{ top: 148 }}
+          >
+            <Image
+              src="/images/logo2.png"
+              alt="UNLOCK YOUR 100"
+              width={294}
+              height={105}
+              priority
+            />
+          </div>
+
+          <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{ bottom: BOTTOM_TO_ALIGN }}
           >
@@ -114,18 +121,20 @@ export default function LandingPage() {
               src="/images/bottle.png"
               alt="100PLUS PRO"
               width={244}
-              height={336}
+              height={330}
               priority
               className="drop-shadow-[0_18px_40px_rgba(0,0,0,.55)]"
             />
           </div>
 
+          {/* Tombol Unlock */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{ top: BALL_H + GAP_AFTER_BALL }}
           >
             <button
               disabled={!unlocked}
+              onClick={() => router.push("/sign-in")}
               className={`h-[40px] w-[160px] rounded-full text-white font-bold text-[14px] tracking-wide
                 shadow-[0_10px_24px_rgba(0,0,0,.45)]
                 bg-[radial-gradient(120%_120%_at_50%_10%,#ff6b6b_0%,#d90429_40%,#b00020_70%,#7a0015_100%)]
@@ -136,6 +145,7 @@ export default function LandingPage() {
             </button>
           </div>
 
+          {/* Scroll cue */}
           <button
             onClick={goMore}
             className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center text-white"
@@ -155,6 +165,7 @@ export default function LandingPage() {
           </button>
         </div>
 
+        {/* Overlay menu */}
         <OverlayMenu
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
@@ -163,8 +174,9 @@ export default function LandingPage() {
         />
       </MobileShell>
 
+      {/* Section bawah */}
       <section className="w-full bg-black flex justify-center">
-        <div className="relative w-[360px]" ref={moreRef}>
+        <div className="relative w=[360px]" ref={moreRef}>
           <div className="relative w-[360px] min-h-[940px] overflow-hidden">
             <Image
               src="/images/ball2.png"
@@ -177,6 +189,7 @@ export default function LandingPage() {
               <h2 className="text-center text-[22px] font-extrabold tracking-wider mb-4">
                 100 <span className="text-red-500">REWARDS</span> AWAIT!
               </h2>
+
               <div className="mx-auto w-[215px] border border-white/10 rounded-md p-3">
                 {[
                   "100 FREE GYM MEMBERSHIPS & TRIALS",
@@ -196,10 +209,7 @@ export default function LandingPage() {
 
               <div className="mx-auto w-[280px] border border-white/10 rounded-md p-4">
                 {[
-                  {
-                    n: "01",
-                    t: "Upload Receipt to unlock the challenge.",
-                  },
+                  { n: "01", t: "Upload Receipt to unlock the challenge." },
                   {
                     n: "02",
                     t: "Every rep you complete in the challenge converts into points.",
