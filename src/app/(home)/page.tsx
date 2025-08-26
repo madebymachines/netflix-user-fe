@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import CountryPill from "@/components/CountryPill";
 import OverlayMenu from "@/components/OverlayMenu";
 import { useAuthStore } from "@/store/authStore"; // Import store
+import Link from "next/link";
 
 const COUNTRIES = [
   { code: "ID", label: "Indonesia" },
@@ -57,7 +58,6 @@ export default function LandingPage() {
     { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Logout", onClick: () => setLoggedIn(false) },
-    
   ];
 
   const menuItems = loggedIn ? authMenu : guestMenu;
@@ -182,7 +182,6 @@ export default function LandingPage() {
                   "100 FREE GYM MEMBERSHIPS & TRIALS",
                   "PHYSICAL ASIA EXCLUSIVE MERCHANDISE",
                   "MEET THE PHYSICAL ASIA WINNER",
-                  "…and more",
                 ].map((t, i) => (
                   <div key={i} className="flex items-start gap-3 py-2">
                     <span className="mt-1 inline-block h-7 w-7 rounded-full bg-white/10 border border-white/20" />
@@ -199,19 +198,19 @@ export default function LandingPage() {
                 {[
                   {
                     n: "01",
-                    t: "Scan or unscrew cap to unlock the challenge.",
+                    t: "Upload Receipt to unlock the challenge.",
                   },
                   {
                     n: "02",
-                    t: "Every rep you complete converts into points.",
+                    t: "Every rep you complete in the challenge converts into points.",
                   },
                   {
                     n: "03",
-                    t: "Collect many points & stay consistent daily to earn bonus points.",
+                    t: "Collect as many points as possible & stay consistent daily to earn bonus points.",
                   },
                   {
                     n: "04",
-                    t: "Compete on the leaderboard to win weekly, monthly & grand prizes.",
+                    t: "Compete on the leaderboard to win Weekly, Monthly, Most Consistent, and Grand Prizes.",
                   },
                 ].map((s, i) => (
                   <div key={i} className="grid grid-cols-[28px_1fr] gap-3 py-3">
@@ -226,9 +225,12 @@ export default function LandingPage() {
                     </div>
                   </div>
                 ))}
-                <button className="mt-3 text-[12px] underline text-red-400">
-                  Learn More
-                </button>
+                <Link
+                  href="/leaderboard"
+                  className="mt-3 inline-block text-[12px] font-semibold underline text-red-500"
+                >
+                  Leaderboard
+                </Link>
               </div>
             </div>
           </div>
