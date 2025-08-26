@@ -93,6 +93,8 @@ export default function LeaderboardPage() {
     "All Time"
   );
 
+  const [loggedIn, setLoggedIn] = useState(false);
+
   useEffect(() => {
     const prev = document.body.style.overflow;
     if (menuOpen) document.body.style.overflow = "hidden";
@@ -125,12 +127,20 @@ export default function LeaderboardPage() {
     []
   );
 
+  const guestMenu = [
+    { label: "Home", href: "/" },
+    { label: "Sign In", href: "/sign-in" },
+    { label: "Register", href: "/register" },
+    { label: "Leaderboard", href: "/leaderboard" },
+  ];
   const authMenu = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
-    { label: "Logout", onClick: () => alert("Logout…") },
+    { label: "Logout", onClick: () => setLoggedIn(false) },
   ];
+
+  const menuItems = loggedIn ? authMenu : guestMenu;
 
   return (
     <MobileShell
@@ -248,7 +258,7 @@ export default function LeaderboardPage() {
       <OverlayMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        items={authMenu}
+        items={menuItems}
       />
     </MobileShell>
   );
