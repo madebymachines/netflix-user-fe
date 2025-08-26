@@ -208,6 +208,7 @@ export default function ProfilePage() {
             onChange={(v) => setForm((s) => ({ ...s, email: v }))}
             type="email"
             required
+            disabled
           />
           <Field
             label="Phone Number"
@@ -251,6 +252,7 @@ function Field({
   type = "text",
   required = false,
   placeholder,
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -258,6 +260,7 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -269,8 +272,10 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent border-b border-white/30 px-0 py-2 placeholder-white/40
-                   focus:outline-none focus:border-white text-[14px]"
+        disabled={disabled}
+        className={`w-full bg-transparent border-b border-white/30 px-0 py-2 placeholder-white/40
+                    focus:outline-none focus:border-white text-[14px]
+                    ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
         placeholder={placeholder || label}
         required={required}
       />
