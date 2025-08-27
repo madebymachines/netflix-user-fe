@@ -1,18 +1,18 @@
-'use client';
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import axios, { AxiosError } from 'axios';
-import MobileShell from '@/components/MobileShell';
-import Header from '@/components/Header';
-import OverlayMenu from '@/components/OverlayMenu';
+"use client";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import axios, { AxiosError } from "axios";
+import MobileShell from "@/components/MobileShell";
+import Header from "@/components/Header";
+import OverlayMenu from "@/components/OverlayMenu";
 
 const otpSchema = z.object({
-  otp: z.string().length(6, 'OTP must be 6 digits'),
+  otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
 type OtpFormInputs = z.infer<typeof otpSchema>;
@@ -28,7 +28,7 @@ export default function VerifyOtpPage() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
+  const email = searchParams.get("email") || "";
 
   const {
     register,
@@ -36,38 +36,38 @@ export default function VerifyOtpPage() {
     formState: { errors, isValid },
   } = useForm<OtpFormInputs>({
     resolver: zodResolver(otpSchema),
-    mode: 'onChange',
+    mode: "onChange",
   });
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = 'hidden';
+    if (menuOpen) document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
 
   const guestMenu = [
-    { label: 'Home', href: '/' },
-    { label: 'Sign In', href: '/sign-in' },
-    { label: 'Register', href: '/register' },
+    { label: "Home", href: "/" },
+    { label: "Sign In", href: "/sign-in" },
+    { label: "Register", href: "/register" },
   ];
 
   const onSubmit: SubmitHandler<OtpFormInputs> = async (data) => {
     if (!isValid) return;
     setApiError(null); // Bersihkan error sebelumnya
     try {
-      await axios.post(process.env.NEXT_PUBLIC_API_URL + '/auth/verify-email', {
+      await axios.post(process.env.NEXT_PUBLIC_API_URL + "/auth/verify-email", {
         email,
         otp: data.otp,
       });
-      alert('Verification successful! You can now log in.');
-      router.push('/sign-in');
+      alert("Verification successful! You can now log in.");
+      router.push("/sign-in");
     } catch (error) {
       if (axios.isAxiosError<ApiErrorResponse>(error)) {
-        setApiError(error.response?.data?.message || 'Verification failed');
+        setApiError(error.response?.data?.message || "Verification failed");
       } else {
-        setApiError('An unexpected error occurred. Please try again.');
+        setApiError("An unexpected error occurred. Please try again.");
       }
     }
   };
@@ -83,7 +83,7 @@ export default function VerifyOtpPage() {
           alt=""
           fill
           sizes="360px"
-          style={{ objectFit: 'cover', objectPosition: 'top' }}
+          style={{ objectFit: "cover", objectPosition: "top" }}
           className="opacity-25"
           priority
         />
@@ -96,14 +96,14 @@ export default function VerifyOtpPage() {
         </h1>
 
         <p className="text-center text-[12px] leading-snug opacity-90 mb-6">
-          We have sent you an OTP via Email, to{' '}
+          We have sent you an OTP via Email, to{" "}
           <span className="font-semibold underline">{email}</span> check your
           inbox &amp; spam folder and enter the code below.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <input
-            {...register('otp')}
+            {...register("otp")}
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={6}
@@ -116,10 +116,10 @@ export default function VerifyOtpPage() {
           )}
 
           <div className="text-[12px]">
-            Did not receive the OTP?{' '}
+            Did not receive the OTP?{" "}
             <button
               type="button"
-              onClick={() => alert('Resend code')}
+              onClick={() => alert("Resend code")}
               className="underline"
             >
               Resend Code
@@ -139,8 +139,8 @@ export default function VerifyOtpPage() {
             className={`w-full rounded-md py-3 font-bold transition
               ${
                 isValid
-                  ? 'bg-white text-black'
-                  : 'bg-white/20 text-white/60 cursor-not-allowed'
+                  ? "bg-white text-black"
+                  : "bg-white/20 text-white/60 cursor-not-allowed"
               }`}
           >
             Verify
