@@ -36,7 +36,7 @@ export default function VerifyPurchasePage() {
   const guestMenu = [
     { label: "Home", href: "/" },
     { label: "Sign In", href: "/sign-in" },
-    { label: "Register", href: "/register" },
+    { label: "Leaderboard", href: "/leaderboard" },
   ];
 
   const openPicker = () => inputRef.current?.click();

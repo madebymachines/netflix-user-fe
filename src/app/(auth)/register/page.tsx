@@ -1,29 +1,29 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import axios, { AxiosError } from 'axios';
-import { useRouter } from 'next/navigation';
-import MobileShell from '@/components/MobileShell';
-import Header from '@/components/Header';
-import OverlayMenu from '@/components/OverlayMenu';
+"use client";
+import { useEffect, useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import axios, { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
+import MobileShell from "@/components/MobileShell";
+import Header from "@/components/Header";
+import OverlayMenu from "@/components/OverlayMenu";
 
 const registerSchema = z
   .object({
-    name: z.string().min(1, 'Full Name is required'),
-    username: z.string().min(1, 'Username is required'),
-    email: z.string().email('Invalid email address'),
+    name: z.string().min(1, "Full Name is required"),
+    username: z.string().min(1, "Username is required"),
+    email: z.string().email("Invalid email address"),
     phoneNumber: z.string().optional(),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
     agree: z.boolean().refine((val) => val === true, {
-      message: 'You must agree to the privacy policy',
+      message: "You must agree to the privacy policy",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
-    path: ['confirmPassword'],
+    path: ["confirmPassword"],
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
@@ -46,23 +46,23 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = 'hidden';
+    if (menuOpen) document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
 
   const guestMenu = [
-    { label: 'Home', href: '/' },
-    { label: 'Sign In', href: '/sign-in' },
-    { label: 'Register', href: '/register' },
+    { label: "Home", href: "/" },
+    { label: "Sign In", href: "/sign-in" },
+    { label: "Leaderboard", href: "/leaderboard" },
   ];
 
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     setApiError(null);
     try {
       const response = await axios.post(
-        process.env.NEXT_PUBLIC_API_URL + '/auth/register',
+        process.env.NEXT_PUBLIC_API_URL + "/auth/register",
         {
           name: data.name,
           username: data.username,
@@ -75,9 +75,9 @@ export default function RegisterPage() {
       router.push(`/verify-otp?email=${data.email}`);
     } catch (error) {
       if (axios.isAxiosError<ApiErrorResponse>(error)) {
-        setApiError(error.response?.data?.message || 'Registration failed');
+        setApiError(error.response?.data?.message || "Registration failed");
       } else {
-        setApiError('An unexpected error occurred. Please try again.');
+        setApiError("An unexpected error occurred. Please try again.");
       }
     }
   };
@@ -97,7 +97,7 @@ export default function RegisterPage() {
               Full Name
             </label>
             <input
-              {...register('name')}
+              {...register("name")}
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
               placeholder="Enter your full name"
@@ -112,7 +112,7 @@ export default function RegisterPage() {
               Username
             </label>
             <input
-              {...register('username')}
+              {...register("username")}
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
               placeholder="Enter username"
@@ -127,7 +127,7 @@ export default function RegisterPage() {
           <div>
             <label className="block text-[12px] mb-1 opacity-80">Email</label>
             <input
-              {...register('email')}
+              {...register("email")}
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
               placeholder="Enter your email address"
@@ -148,7 +148,7 @@ export default function RegisterPage() {
                 +62
               </span>
               <input
-                {...register('phoneNumber')}
+                {...register("phoneNumber")}
                 className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                            focus:outline-none focus:border-white"
                 placeholder="Enter your phone number"
@@ -166,7 +166,7 @@ export default function RegisterPage() {
               Create New Password
             </label>
             <input
-              {...register('password')}
+              {...register("password")}
               type="password"
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
@@ -184,7 +184,7 @@ export default function RegisterPage() {
               Re-type New Password
             </label>
             <input
-              {...register('confirmPassword')}
+              {...register("confirmPassword")}
               type="password"
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
@@ -199,12 +199,12 @@ export default function RegisterPage() {
 
           <label className="flex items-start gap-2 text-[12px] leading-snug">
             <input
-              {...register('agree')}
+              {...register("agree")}
               type="checkbox"
               className="mt-0.5 accent-red-600"
             />
             <span>
-              By creating an account, you agree on our{' '}
+              By creating an account, you agree on our{" "}
               <a href="/privacy-policy" className="underline">
                 privacy policy
               </a>
@@ -232,7 +232,7 @@ export default function RegisterPage() {
         </form>
 
         <p className="mt-6 text-center text-[12px]">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <a href="/sign-in" className="text-red-500 underline">
             Login here
           </a>

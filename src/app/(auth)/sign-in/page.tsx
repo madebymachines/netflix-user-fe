@@ -1,19 +1,19 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useRouter } from 'next/navigation';
-import MobileShell from '@/components/MobileShell';
-import Header from '@/components/Header';
-import OverlayMenu from '@/components/OverlayMenu';
-import api from '@/lib/axios';
-import { useAuthStore, User } from '@/store/authStore';
-import axios from 'axios';
+"use client";
+import { useEffect, useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
+import MobileShell from "@/components/MobileShell";
+import Header from "@/components/Header";
+import OverlayMenu from "@/components/OverlayMenu";
+import api from "@/lib/axios";
+import { useAuthStore, User } from "@/store/authStore";
+import axios from "axios";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginFormInputs = z.infer<typeof loginSchema>;
@@ -38,32 +38,32 @@ export default function SignInPage() {
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = 'hidden';
+    if (menuOpen) document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
 
   const guestMenu = [
-    { label: 'Home', href: '/' },
-    { label: 'Sign In', href: '/sign-in' },
-    { label: 'Register', href: '/register' },
+    { label: "Home", href: "/" },
+    { label: "Sign In", href: "/sign-in" },
+    { label: "Leaderboard", href: "/leaderboard" },
   ];
 
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
     setApiError(null);
     try {
       // baseURL sudah di-setting di instance axios, jadi tidak perlu ditulis lagi
-      const response = await api.post<{ user: User }>('/auth/login', data);
+      const response = await api.post<{ user: User }>("/auth/login", data);
 
       setUser(response.data.user);
 
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (error: any) {
       const axiosError = error as { response?: { data?: ApiErrorResponse } };
       setApiError(
         axiosError.response?.data?.message ||
-          'Login failed. Please check your credentials.'
+          "Login failed. Please check your credentials."
       );
     }
   };
@@ -82,7 +82,7 @@ export default function SignInPage() {
           <div>
             <label className="block text-[12px] mb-1 opacity-80">Email</label>
             <input
-              {...register('email')}
+              {...register("email")}
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
               placeholder="Enter Email here"
@@ -99,7 +99,7 @@ export default function SignInPage() {
               Password
             </label>
             <input
-              {...register('password')}
+              {...register("password")}
               type="password"
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
                          focus:outline-none focus:border-white"
@@ -134,7 +134,7 @@ export default function SignInPage() {
         </form>
 
         <p className="mt-8 text-center text-[12px]">
-          Don’t have an account?{' '}
+          Don’t have an account?{" "}
           <a href="/register" className="text-red-500 underline">
             Register here
           </a>

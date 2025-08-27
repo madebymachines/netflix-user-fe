@@ -50,7 +50,7 @@ export default function VerifyOtpPage() {
   const guestMenu = [
     { label: "Home", href: "/" },
     { label: "Sign In", href: "/sign-in" },
-    { label: "Register", href: "/register" },
+    { label: "Leaderboard", href: "/leaderboard" },
   ];
 
   const onSubmit: SubmitHandler<OtpFormInputs> = async (data) => {
