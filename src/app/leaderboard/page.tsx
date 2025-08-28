@@ -1,9 +1,11 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
+import { useAuthStore } from "@/store/authStore";
 
 function HexAvatar({
   size = 64,
@@ -14,13 +16,13 @@ function HexAvatar({
   src?: string;
   badge?: string | number;
 }) {
-  const outer = {
+  const outer: React.CSSProperties = {
     width: size,
     height: size,
     clipPath: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
     background: "linear-gradient(180deg,#bdbdbd,#6b6b6b 50%,#d1d1d1)",
     padding: Math.max(4, Math.round(size * 0.06)),
-  } as React.CSSProperties;
+  };
 
   return (
     <div className="relative inline-block" style={outer}>
@@ -93,7 +95,8 @@ export default function LeaderboardPage() {
     "All Time"
   );
 
-  const [loggedIn, setLoggedIn] = useState(false);
+  const { user, isLoading } = useAuthStore();
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -137,10 +140,10 @@ export default function LeaderboardPage() {
     { label: "Dashboard", href: "/dashboard" },
     { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
-    { label: "Logout", onClick: () => setLoggedIn(false) },
+    { label: "Logout", onClick: () => alert("Logout…") },
   ];
 
-  const menuItems = loggedIn ? authMenu : guestMenu;
+  const menuItems = isLoading ? [] : isLoggedIn ? authMenu : guestMenu;
 
   return (
     <MobileShell
@@ -174,6 +177,7 @@ export default function LeaderboardPage() {
           onChange={(v) => setRegion(v as any)}
           className="w-[320px] mx-auto"
         />
+
         <div className="grid grid-cols-3 gap-2 w-[320px] mx-auto mt-2">
           {(["All Time", "Weekly", "Top Streak"] as const).map((it) => {
             const active = period === it;
@@ -235,6 +239,7 @@ export default function LeaderboardPage() {
                   <div className="text-right pr-1">{pts}</div>
                 </div>
               ))}
+
               <div className="grid grid-cols-[40px_1fr_60px_70px] text-[11px] px-2 py-1 bg-red-600">
                 <div>01</div>
                 <div>@dwiotten</div>
