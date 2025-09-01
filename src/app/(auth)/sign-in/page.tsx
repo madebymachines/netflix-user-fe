@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,6 @@ import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import api from "@/lib/axios";
 import { useAuthStore, User } from "@/store/authStore";
-import axios from "axios";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -59,7 +59,7 @@ export default function SignInPage() {
       setUser(response.data.user);
 
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
       const axiosError = error as { response?: { data?: ApiErrorResponse } };
       setApiError(
         axiosError.response?.data?.message ||
