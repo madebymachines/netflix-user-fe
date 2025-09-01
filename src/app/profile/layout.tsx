@@ -1,9 +1,12 @@
-import ProtectedRoute from '@/components/ProtectedRoute';
+"use client";
 
-export default function ProfileLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+import type { ReactNode } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
+
+export default function ProfileLayout({ children }: { children: ReactNode }) {
+  return (
+    <ProtectedRoute require="auth" redirect="/sign-in">
+      {children}
+    </ProtectedRoute>
+  );
 }

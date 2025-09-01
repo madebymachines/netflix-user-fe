@@ -3,9 +3,9 @@
 import type { ReactNode } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function SignInLayout({ children }: { children: ReactNode }) {
   return (
-    <ProtectedRoute require="auth" redirect="/sign-in">
+    <ProtectedRoute require="guest" redirect="/dashboard">
       {children}
     </ProtectedRoute>
   );
