@@ -1,12 +1,14 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import { Pencil } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axios";
+import { isAxiosError } from "axios";
 
 type FormState = {
   fullName: string;
@@ -18,39 +20,40 @@ type FormState = {
 const CONTENT_H = 590;
 
 export default function ProfilePage() {
+  const router = useRouter();
+
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, isLoading, setUser } = useAuthStore();
+  const { user, isLoading, checkAuth } = useAuthStore();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Initialize form with user data from auth store
-  const getInitialFormState = (): FormState => ({
-    fullName: user?.name || "",
-    username: user?.username || "",
-    email: user?.email || "",
-    phone: user?.phoneNumber || "",
-  });
-
-  const [form, setForm] = useState<FormState>(getInitialFormState());
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-
-  // Update form when user data changes
-  useEffect(() => {
-    if (user) {
-      setForm(getInitialFormState());
-    }
-  }, [user]);
-
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const onPickAvatar = () => fileRef.current?.click();
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    setAvatarUrl((prev) => {
-      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return url;
-    });
+  // ==== Toast ====
+  const [toast, setToast] = useState<string | null>(null);
+  const showToastThenDashboard = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => {
+      setToast(null);
+      router.push("/dashboard");
+    }, 2000);
   };
+
+  // ==== Avatar state ====
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>(""); // preview (blob)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  // ==== Form state ====
+  const initialFormState = useMemo<FormState>(
+    () => ({
+      fullName: user?.name ?? "",
+      username: user?.username ?? "",
+      email: user?.email ?? "",
+      phone: user?.phoneNumber ?? "",
+    }),
+    [user]
+  );
+  const [form, setForm] = useState<FormState>(initialFormState);
+  useEffect(() => setForm(initialFormState), [initialFormState]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -60,48 +63,83 @@ export default function ProfilePage() {
     };
   }, [menuOpen]);
 
-  const onCancel = () => setForm(getInitialFormState());
+  useEffect(() => {
+    return () => {
+      if (avatarUrl && avatarUrl.startsWith("blob:"))
+        URL.revokeObjectURL(avatarUrl);
+    };
+  }, [avatarUrl]);
+
+  const onPickAvatar = () => fileRef.current?.click();
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!/^image\//.test(f.type)) {
+      alert("File harus berupa gambar");
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      alert("Maksimal ukuran 5MB");
+      return;
+    }
+    const url = URL.createObjectURL(f);
+    setAvatarFile(f);
+    setAvatarUrl((prev) => {
+      if (prev && prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return url;
+    });
+  };
+
+  const uploadAvatar = async () => {
+    if (!avatarFile) {
+      alert("Pilih gambar terlebih dahulu");
+      return;
+    }
+    try {
+      setIsUploadingPhoto(true);
+      const fd = new FormData();
+      fd.append("profilePicture", avatarFile);
+
+      await api.post("/user/me/profile-picture", fd);
+
+      await checkAuth();
+      showToastThenDashboard("Profile picture updated!");
+      setAvatarFile(null);
+      if (avatarUrl.startsWith("blob:")) URL.revokeObjectURL(avatarUrl);
+      setAvatarUrl("");
+    } catch (err: unknown) {
+      const msg = isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message || err.message
+        : "Gagal upload foto.";
+      console.error(err);
+      alert(msg);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const onCancel = () => {
+    router.push("/dashboard");
+  };
 
   const onUpdate = async () => {
     if (!user) return;
-
-    // Basic validation
-    if (!form.fullName.trim()) {
-      alert("Full name is required");
-      return;
-    }
-    if (!form.username.trim()) {
-      alert("Username is required");
-      return;
-    }
-    if (!form.email.trim()) {
-      alert("Email is required");
-      return;
-    }
-
     setIsUpdating(true);
     try {
-      // Prepare update data
-      const updateData = {
+      const payload = {
         name: form.fullName.trim(),
         username: form.username.trim(),
-        email: form.email.trim(),
         phoneNumber: form.phone.trim() || undefined,
       };
-
-      // Send update request to backend
-      const response = await api.put(`/users/${user.id}`, updateData);
-
-      // Update user data in auth store
-      setUser(response.data);
-
-      alert("Profile updated successfully!");
-    } catch (error: any) {
-      console.error("Update profile error:", error);
-      alert(
-        error.response?.data?.message ||
-          "Failed to update profile. Please try again."
-      );
+      await api.put("/user/me", payload);
+      await checkAuth();
+      showToastThenDashboard("Profile updated successfully!");
+    } catch (error: unknown) {
+      const msg = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || error.message
+        : "Failed to update profile.";
+      alert(msg);
     } finally {
       setIsUpdating(false);
     }
@@ -114,7 +152,6 @@ export default function ProfilePage() {
     { label: "Logout", onClick: () => alert("Logout…") },
   ];
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-black text-white">
@@ -126,11 +163,23 @@ export default function ProfilePage() {
     );
   }
 
+  const isBlobPreview = avatarUrl.startsWith("blob:");
+
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
       contentHeight={CONTENT_H}
     >
+      {/* Toast */}
+      {toast && (
+        <div className="fixed z-50 left-1/2 top-4 -translate-x-1/2">
+          <div className="rounded-md bg-white text-black px-4 py-2 shadow-[0_10px_24px_rgba(0,0,0,.35)] font-semibold">
+            {toast}
+          </div>
+        </div>
+      )}
+
+      {/* BG */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -149,25 +198,24 @@ export default function ProfilePage() {
           Profile
         </h1>
 
-        <div className="w-full flex justify-center mb-4">
+        {/* Avatar */}
+        <div className="w-full flex flex-col items-center gap-3 mb-4">
           <div className="relative">
-            <div className="h-[120px] w-[120px] rounded-lg overflow-hidden ring-1 ring-white/20 bg-black/30">
-              {avatarUrl ? (
-                <Image
+            <div className="h-[120px] w-[120px] rounded-lg overflow-hidden ring-1 ring-white/20 bg-black/30 relative">
+              {isBlobPreview ? (
+                <img
                   src={avatarUrl}
-                  alt="Avatar"
-                  fill
-                  sizes="120px"
-                  style={{ objectFit: "cover" }}
+                  alt="Avatar preview"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
                 <Image
-                  src="/images/bottle.png"
+                  src={user?.profilePictureUrl || "/images/bottle.png"}
                   alt="Avatar"
                   fill
                   sizes="120px"
                   style={{ objectFit: "cover" }}
-                  className="opacity-80"
+                  className={!user?.profilePictureUrl ? "opacity-80" : ""}
                 />
               )}
             </div>
@@ -187,8 +235,19 @@ export default function ProfilePage() {
               onChange={onFile}
             />
           </div>
+
+          {avatarFile && (
+            <button
+              onClick={uploadAvatar}
+              disabled={isUploadingPhoto}
+              className="h-[36px] px-4 rounded-md bg-white text-black font-heading tracking-[.02em] disabled:opacity-50"
+            >
+              {isUploadingPhoto ? "UPLOADING..." : "SAVE PHOTO"}
+            </button>
+          )}
         </div>
 
+        {/* Form */}
         <div className="space-y-4">
           <Field
             label="Full Name"
