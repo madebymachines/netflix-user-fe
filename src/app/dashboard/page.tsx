@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import MobileShell from "@/components/MobileShell";
@@ -8,7 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, isLoading } = useAuthStore();
+  const { user, stats, isLoading } = useAuthStore();
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -21,16 +22,18 @@ export default function DashboardPage() {
   const CONTENT_H = 590;
 
   const userDisplayData = {
-    name: user?.name || "User",
-    username: user?.username || "username",
-    points: 18308,
-    photoUrl: "",
+    name: user?.name ?? "User",
+    username: user?.username ?? "username",
+    points: stats?.totalPoints ?? 0,
+    photoUrl: user?.profilePictureUrl ?? "",
   };
-  const stats = [
-    { value: 154, l1: "COMPLETED", l2: "CHALLENGE" },
-    { value: 10986, l1: "SQUAT", l2: "REPETITION" },
-    { value: 1604, l1: "BURNED", l2: "KCAL" },
+
+  const statsCards = [
+    { value: stats?.totalChallenges ?? 0, l1: "COMPLETED", l2: "CHALLENGE" },
+    { value: stats?.totalReps ?? 0, l1: "SQUAT", l2: "REPETITION" },
+    { value: stats?.totalCalori ?? 0, l1: "BURNED", l2: "KCAL" },
   ];
+
   const weekly = [9, 6, 8, 5, 7, 3, 2];
   const barHeights = useMemo(
     () => weekly.map((v) => `${Math.max(0, Math.min(10, v)) * 10}%`),
@@ -45,7 +48,6 @@ export default function DashboardPage() {
     { label: "Logout", onClick: () => alert("Logout…") },
   ];
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-black text-white">
@@ -76,13 +78,11 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
-      {/* GRID TANPA 1fr */}
       <div
         className="relative z-10 h-full w-full overflow-hidden text-white grid justify-items-center"
         style={{
-          // 5 baris: banner, profil, stats, weekly, CTA
           gridTemplateRows: "73px 116px 64px 160px 56px",
-          rowGap: "8px", // atur jarak antar blok di sini
+          rowGap: "8px",
         }}
       >
         {/* Banner */}
@@ -175,7 +175,7 @@ export default function DashboardPage() {
 
         {/* Stats */}
         <section className="w/[320px] h-[64px] grid grid-cols-3 w-[320px]">
-          {stats.map((s, i) => (
+          {statsCards.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className="font-heading tabular-nums text-[28px] leading-none">
                 {Intl.NumberFormat("id-ID").format(s.value)}
@@ -237,7 +237,6 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* CTA – sekarang menempel rapat ke card di atasnya */}
         <a
           href="/challenge"
           className="w-[320px] h-[56px] mt-8 rounded-md grid place-items-center font-heading text-[15px] tracking-[.02em]
