@@ -1,13 +1,30 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
+
+const COUNTRIES = [
+  { code: "ID", label: "Indonesia" },
+  { code: "SG", label: "Singapore" },
+  { code: "MY", label: "Malaysia" },
+  { code: "TH", label: "Thailand" },
+  { code: "KH", label: "Cambodia" },
+  { code: "VN", label: "Vietnam" },
+  { code: "PH", label: "Philippines" },
+  { code: "BN", label: "Brunei" },
+  { code: "LA", label: "Laos" },
+  { code: "MM", label: "Myanmar" },
+];
+const DEFAULT_CODE = "SG";
+const codeToLabel = (code?: string | null) =>
+  COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
 
 const registerSchema = z
   .object({
@@ -21,28 +38,49 @@ const registerSchema = z
       message: "You must agree to the privacy policy",
     }),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
-
 interface ApiErrorResponse {
   message: string;
 }
 
 export default function RegisterPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null); // State untuk menyimpan error API
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const c = (localStorage.getItem("guestRegion") || "").toUpperCase();
+      setCountry(c || null);
+    } catch {
+      setCountry(null);
+    }
+  }, []);
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
+    watch,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
+    defaultValues: { agree: false },
+    mode: "onChange",
   });
+
+  const agreeChecked = watch("agree", false);
+
+  const usingCountryLabel = useMemo(() => {
+    const label = codeToLabel(country);
+    if (label) return label;
+    return codeToLabel(DEFAULT_CODE) || DEFAULT_CODE;
+  }, [country]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -60,20 +98,20 @@ export default function RegisterPage() {
 
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     setApiError(null);
-    try {
-      const response = await axios.post(
-        process.env.NEXT_PUBLIC_API_URL + "/auth/register",
-        {
-          name: data.name,
-          username: data.username,
-          email: data.email,
-          password: data.password,
-          phoneNumber: data.phoneNumber,
-        }
-      );
+    const countryCode = (country || DEFAULT_CODE).toUpperCase();
 
-      router.push(`/verify-otp?email=${data.email}`);
-    } catch (error) {
+    try {
+      await axios.post(process.env.NEXT_PUBLIC_API_URL + "/auth/register", {
+        name: data.name,
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        phoneNumber: data.phoneNumber,
+        country: countryCode,
+      });
+
+      router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+    } catch (error: unknown) {
       if (axios.isAxiosError<ApiErrorResponse>(error)) {
         setApiError(error.response?.data?.message || "Registration failed");
       } else {
@@ -91,6 +129,14 @@ export default function RegisterPage() {
       <div className="relative z-10 w-full px-5 pt-6 pb-8 text-white">
         <h1 className="text-[28px] font-extrabold mb-6">Sign Up</h1>
 
+        <div className="mb-4 text-[12px] text-white/80">
+          Using country:{" "}
+          <span className="font-semibold">
+            {usingCountryLabel}
+            {!country ? " (default)" : ""}
+          </span>
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
@@ -98,8 +144,7 @@ export default function RegisterPage() {
             </label>
             <input
               {...register("name")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter your full name"
             />
             {errors.name && (
@@ -113,8 +158,7 @@ export default function RegisterPage() {
             </label>
             <input
               {...register("username")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter username"
             />
             {errors.username && (
@@ -128,8 +172,7 @@ export default function RegisterPage() {
             <label className="block text-[12px] mb-1 opacity-80">Email</label>
             <input
               {...register("email")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter your email address"
             />
             {errors.email && (
@@ -149,8 +192,7 @@ export default function RegisterPage() {
               </span>
               <input
                 {...register("phoneNumber")}
-                className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                           focus:outline-none focus:border-white"
+                className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
                 placeholder="Enter your phone number"
               />
             </div>
@@ -168,8 +210,7 @@ export default function RegisterPage() {
             <input
               {...register("password")}
               type="password"
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter new password"
             />
             {errors.password && (
@@ -186,8 +227,7 @@ export default function RegisterPage() {
             <input
               {...register("confirmPassword")}
               type="password"
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Confirm new password"
             />
             {errors.confirmPassword && (
@@ -212,9 +252,7 @@ export default function RegisterPage() {
             </span>
           </label>
           {errors.agree && (
-            <p className="text-red-500 text-xs mt-1 -mt-4">
-              {errors.agree.message}
-            </p>
+            <p className="text-red-500 text-xs -mt-4">{errors.agree.message}</p>
           )}
 
           {apiError && (
@@ -225,9 +263,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full rounded-md bg-white text-black py-2 font-bold"
+            disabled={!agreeChecked || isSubmitting}
+            className="w-full rounded-md bg-white text-black py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit
+            {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </form>
 
