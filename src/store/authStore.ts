@@ -1,50 +1,79 @@
-import { create } from 'zustand';
-import api from '@/lib/axios';
-import { useRouter } from 'next/navigation';
+import { create } from "zustand";
+import api from "@/lib/axios";
 
-// Definisikan tipe User agar konsisten
 export interface User {
   id: number;
   name: string;
   email: string;
   username: string;
   phoneNumber?: string;
-  role: 'USER' | 'ADMIN';
-  isEmailVerified: boolean;
+  country?: string;
+  profilePictureUrl?: string | null;
+  purchaseStatus: string;
+}
+
+export interface UserStats {
+  totalPoints: number;
+  totalChallenges: number;
+  topStreak: number;
+  currentStreak: number;
+  region: string;
+  totalReps: number;
+  totalCalori: number;
+}
+
+interface MeResponse {
+  profile: User;
+  stats: UserStats;
 }
 
 interface AuthState {
   user: User | null;
+  stats: UserStats | null;
   isAuthenticated: boolean;
-  isLoading: boolean; // Tambahkan state loading untuk inisialisasi
-  setUser: (user: User | null) => void;
-  checkAuth: () => Promise<void>; // Fungsi untuk memeriksa sesi saat app load
+  isLoading: boolean;
+  setUser: (user: User | null, stats?: UserStats | null) => void;
+  checkAuth: (opts?: { allowRefresh?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
+  stats: null,
   isAuthenticated: false,
-  isLoading: true, // Awalnya true sampai pengecekan selesai
-  setUser: (user) => {
-    set({ user, isAuthenticated: !!user, isLoading: false });
+  isLoading: true,
+
+  setUser: (user, stats = null) => {
+    set({ user, stats, isAuthenticated: !!user, isLoading: false });
   },
-  checkAuth: async () => {
+
+  checkAuth: async (opts) => {
+    const allowRefresh = opts?.allowRefresh ?? true;
     try {
-      const response = await api.get<User>('/users/me');
-      set({ user: response.data, isAuthenticated: true, isLoading: false });
-    } catch (error) {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      const cfg = allowRefresh ? undefined : { _skipAuthRefresh: true };
+      const { data } = await api.get<MeResponse>("/user/me", cfg);
+      set({
+        user: data.profile,
+        stats: data.stats,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+    } catch {
+      set({
+        user: null,
+        stats: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
   },
+
   logout: async () => {
     try {
-      await api.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      set({ user: null, isAuthenticated: false });
-      // Redirect bisa ditangani di komponen yang memanggil logout
+      await api.post("/auth/logout", null, { _skipAuthRefresh: true });
+    } catch {
+      /* ignore */
     }
+    set({ user: null, stats: null, isAuthenticated: false });
   },
 }));
