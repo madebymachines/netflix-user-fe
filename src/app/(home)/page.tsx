@@ -1,8 +1,9 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronsDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import CountryPill from "@/components/CountryPill";
@@ -27,6 +28,7 @@ const BALL_H = 420;
 const BOTTOM_TO_ALIGN = CONTENT_H - BALL_H;
 const GAP_AFTER_BALL = 20;
 const BTN_H = 40;
+const STORAGE_KEY = "guestRegion";
 
 export default function LandingPage() {
   const [country, setCountry] = useState<string | null>(null);
@@ -34,6 +36,19 @@ export default function LandingPage() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const saved =
+      typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+    if (saved) setCountry(saved);
+  }, []);
+
+  const onCountryChange = (val: string | null) => {
+    setCountry(val);
+    if (typeof window === "undefined") return;
+    if (val) localStorage.setItem(STORAGE_KEY, val);
+    else localStorage.removeItem(STORAGE_KEY);
+  };
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -47,11 +62,19 @@ export default function LandingPage() {
   const moreRef = useRef<HTMLDivElement | null>(null);
   const goMore = () => moreRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const menuItems = [
-    { label: "Home", href: "/" },
-    { label: "Sign In", href: "/sign-in" },
-    { label: "Leaderboard", href: "/leaderboard" },
-  ];
+  const leaderboardHref = useMemo(
+    () => `/leaderboard${country ? `?region=${country}` : ""}`,
+    [country]
+  );
+
+  const menuItems = useMemo(
+    () => [
+      { label: "Home", href: "/" },
+      { label: "Sign In", href: "/sign-in" },
+      { label: "Leaderboard", href: leaderboardHref },
+    ],
+    [leaderboardHref]
+  );
 
   return (
     <>
@@ -65,7 +88,7 @@ export default function LandingPage() {
               <div className="absolute left-1/2 -translate-x-1/2 top-[62px] pointer-events-auto">
                 <CountryPill
                   value={country}
-                  onChange={setCountry}
+                  onChange={onCountryChange}
                   options={COUNTRIES}
                   placeholder="Select Country First"
                 />
@@ -93,7 +116,7 @@ export default function LandingPage() {
             <div className="absolute left-1/2 -translate-x-1/2 top-4 z-30">
               <CountryPill
                 value={country}
-                onChange={setCountry}
+                onChange={onCountryChange}
                 options={COUNTRIES}
                 placeholder="Select Country"
               />
@@ -177,7 +200,7 @@ export default function LandingPage() {
       {/* Section bawah */}
       <section className="w-full bg-black flex justify-center">
         <div className="relative w=[360px]" ref={moreRef}>
-          <div className="relative w-[360px] min-h-[940px] overflow-hidden">
+          <div className="relative w-[360px] min-h=[940px] overflow-hidden">
             <Image
               src="/images/ball2.png"
               alt="Background lower"
@@ -235,8 +258,9 @@ export default function LandingPage() {
                     </div>
                   </div>
                 ))}
+
                 <Link
-                  href="/leaderboard"
+                  href={leaderboardHref}
                   className="mt-3 inline-block text-[12px] font-semibold underline text-red-500"
                 >
                   Leaderboard
