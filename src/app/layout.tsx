@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { urw, gravtrac } from "./fonts";
-import AuthInitializer from "@/components/AuthInitializer";
 import DesktopGate from "@/components/DesktopGate";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +20,6 @@ export default function RootLayout({
       <body
         className={`${urw.variable} ${gravtrac.variable} bg-black antialiased`}
       >
-        {/* <AuthInitializer /> */}
         {/* <DesktopGate> */}
         {children}
         {/* </DesktopGate> */}
