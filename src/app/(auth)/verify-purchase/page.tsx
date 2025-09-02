@@ -1,18 +1,26 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import { Upload, Trash2, AlertTriangle } from "lucide-react";
+import api from "@/lib/axios";
+import { isAxiosError } from "axios";
+
+type Method = "RECEIPT" | "MEMBER_GYM";
 
 export default function VerifyPurchasePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [method, setMethod] = useState<Method>("RECEIPT");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
 
   const CONTENT_H = 590;
 
@@ -20,10 +28,12 @@ export default function VerifyPurchasePage() {
   const rejected = sp.get("rejected") === "1";
   const rejectMsg = sp.get("msg") || "";
 
-  const title = rejected ? "Re-Verify Your Purchase!" : "Verify Your Purchase!";
-  const desc = rejected
-    ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
-    : "To continue, please upload full receipt / proof of purchase of 100 Plus Drink below.";
+  useEffect(() => {
+    const m = (sp.get("method") as Method) || "RECEIPT";
+    setMethod(m);
+    clearFile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sp]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -33,10 +43,17 @@ export default function VerifyPurchasePage() {
     };
   }, [menuOpen]);
 
-  const guestMenu = [
-    { label: "Home", href: "/" },
-    { label: "Sign In", href: "/sign-in" },
+  useEffect(() => {
+    return () => {
+      if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  const authMenu = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Profile", href: "/profile" },
     { label: "Leaderboard", href: "/leaderboard" },
+    { label: "Logout", onClick: () => alert("Logout…") },
   ];
 
   const openPicker = () => inputRef.current?.click();
@@ -53,7 +70,10 @@ export default function VerifyPurchasePage() {
     const url = URL.createObjectURL(f);
     setError(null);
     setFile(f);
-    setPreview(url);
+    setPreview((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return url;
+    });
   };
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -62,23 +82,66 @@ export default function VerifyPurchasePage() {
   };
 
   const clearFile = () => {
-    if (preview) URL.revokeObjectURL(preview);
+    if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
     setFile(null);
     setPreview(null);
   };
 
-  const onSubmit: React.FormEventHandler = (e) => {
+  const onSubmit: React.FormEventHandler = async (e) => {
     e.preventDefault();
-    if (!file) return;
-    // TODO: upload ke server
-    alert(`Submit receipt: ${file.name}`);
+    if (!file || submitting) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      // Sesuai Postman: endpoint + field name
+      const fd = new FormData();
+      fd.append("receiptImage", file);
+      fd.append("type", method); // kirim method aktif: RECEIPT | MEMBER_GYM
+
+      await api.post("/user/purchase-verification", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Sukses → lanjut ke dashboard
+      router.replace("/dashboard");
+    } catch (err: unknown) {
+      const msg = isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message || err.message
+        : "Failed to upload image.";
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // ===== Text sesuai mode =====
+  const title =
+    method === "RECEIPT"
+      ? rejected
+        ? "Re-Verify Your Purchase!"
+        : "Verify Your Purchase!"
+      : "Verify Your Membership!";
+
+  const desc =
+    method === "RECEIPT"
+      ? rejected
+        ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
+        : "To continue, please upload full receipt / proof of purchase of 100 Plus Drink below."
+      : "To continue, please upload a photo of the front of your gym membership card.";
+
+  const uploadLabel =
+    method === "RECEIPT" ? "Upload Receipt Here" : "Upload Card Photo Here";
+
+  const dropHeightClass = method === "MEMBER_GYM" ? "h-[277px]" : "h-[320px]";
 
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
       contentHeight={CONTENT_H}
     >
+      {/* Background */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -92,19 +155,60 @@ export default function VerifyPurchasePage() {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
+      {/* Content */}
       <form
         onSubmit={onSubmit}
-        className="relative z-10 h-full w-full px-5 pt-6 text-white"
+        className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white"
       >
-        <h1 className="text-center text-[24px] font-extrabold tracking-wide mb-3">
+        <p className="mb-3 text-center text-[11px] opacity-80">
+          Choose Method to Verified Your Account!
+        </p>
+
+        {/* Toggle buttons */}
+        <div className="mx-auto mb-5 flex w-full max-w-[320px] gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMethod("RECEIPT");
+              clearFile();
+            }}
+            className={[
+              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
+              method === "RECEIPT"
+                ? "bg-white text-black shadow"
+                : "border border-white/60 text-white",
+            ].join(" ")}
+          >
+            PRODUCT PURCHASE
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMethod("MEMBER_GYM");
+              clearFile();
+            }}
+            className={[
+              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
+              method === "MEMBER_GYM"
+                ? "bg-white text-black shadow"
+                : "border border-white/60 text-white",
+            ].join(" ")}
+          >
+            GYM MEMBER
+          </button>
+        </div>
+
+        {/* Title & description */}
+        <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
           {title}
         </h1>
-        <p className="text-center text-[12px] leading-snug opacity-90 mb-4">
+        <p className="mb-4 text-center text-[12px] leading-snug opacity-90">
           {desc}
         </p>
 
-        {rejected && (
-          <div className="mx-auto mb-4 flex items-start gap-2 rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-300 max-w-[320px]">
+        {/* Rejected reason */}
+        {rejected && method === "RECEIPT" && (
+          <div className="mx-auto mb-4 flex max-w-[320px] items-start gap-2 rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
             <AlertTriangle className="mt-[2px] h-4 w-4" />
             <span>{rejectMsg || "Reason: invalid or unreadable receipt."}</span>
           </div>
@@ -114,27 +218,23 @@ export default function VerifyPurchasePage() {
           onClick={openPicker}
           onDrop={onDrop}
           onDragOver={(e) => e.preventDefault()}
-          className={`relative mx-auto w-full max-w-[320px] h-[320px] rounded-lg border-2
-                      ${
-                        preview
-                          ? "border-white/20"
-                          : "border-white/60 border-dashed"
-                      }
-                      bg-black/20 flex items-center justify-center overflow-hidden`}
+          className={[
+            "relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20",
+            dropHeightClass,
+            preview ? "border-white/20" : "border-white/60 border-dashed",
+          ].join(" ")}
         >
           {!preview ? (
-            <div className="flex flex-col items-center gap-3 pointer-events-none">
-              <Upload className="w-8 h-8 opacity-80" />
-              <span className="text-[13px] opacity-90">
-                Upload Receipt Here
-              </span>
+            <div className="pointer-events-none flex flex-col items-center gap-3">
+              <Upload className="h-8 w-8 opacity-80" />
+              <span className="text-[13px] opacity-90">{uploadLabel}</span>
             </div>
           ) : (
             <>
               <img
                 src={preview}
-                alt="Receipt preview"
-                className="w-full h-full object-contain"
+                alt="Preview"
+                className="h-full w-full object-contain"
               />
               <button
                 type="button"
@@ -142,14 +242,13 @@ export default function VerifyPurchasePage() {
                   e.stopPropagation();
                   clearFile();
                 }}
-                className="absolute top-2 right-2 h-9 w-9 grid place-items-center rounded-full bg-red-600"
+                className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-red-600"
                 aria-label="Remove file"
               >
-                <Trash2 className="w-5 h-5 text-white" />
+                <Trash2 className="h-5 w-5 text-white" />
               </button>
             </>
           )}
-
           <input
             ref={inputRef}
             type="file"
@@ -159,28 +258,40 @@ export default function VerifyPurchasePage() {
           />
         </div>
 
-        {error && (
-          <p className="text-center text-[12px] text-red-400 mt-2">{error}</p>
+        {method === "MEMBER_GYM" && (
+          <>
+            <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
+            <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
+              This verification is only for member of{" "}
+              <span className="font-extrabold">Fitness Verse</span>
+            </p>
+          </>
         )}
 
+        {/* Error */}
+        {error && (
+          <p className="mt-2 text-center text-[12px] text-red-400">{error}</p>
+        )}
+
+        {/* Submit */}
         <button
           type="submit"
-          disabled={!file}
-          className={`mx-auto mt-6 block w-full max-w-[320px] rounded-md py-3 font-bold transition
-            ${
-              file
-                ? "bg-white text-black"
-                : "bg-white/20 text-white/60 cursor-not-allowed"
-            }`}
+          disabled={!file || submitting}
+          className={[
+            "mx-auto mt-6 block w-full max-w-[320px] rounded-md py-3 text-[13px] font-extrabold tracking-wide transition",
+            !file || submitting
+              ? "cursor-not-allowed bg-white/20 text-white/60"
+              : "bg-white text-black",
+          ].join(" ")}
         >
-          Submit
+          {submitting ? "UPLOADING…" : "SUBMIT"}
         </button>
       </form>
 
       <OverlayMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        items={guestMenu}
+        items={authMenu}
         contentHeight={CONTENT_H}
       />
     </MobileShell>

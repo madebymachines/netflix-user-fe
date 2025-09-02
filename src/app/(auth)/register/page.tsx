@@ -10,21 +10,28 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 
+/** ====== Master negara & dial code ====== */
 const COUNTRIES = [
-  { code: "ID", label: "Indonesia" },
   { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
   { code: "TH", label: "Thailand" },
-  { code: "KH", label: "Cambodia" },
-  { code: "VN", label: "Vietnam" },
-  { code: "PH", label: "Philippines" },
-  { code: "BN", label: "Brunei" },
-  { code: "LA", label: "Laos" },
-  { code: "MM", label: "Myanmar" },
+  { code: "ID", label: "Indonesia" }, // supaya +62 bisa muncul seperti screenshot
 ];
+const COUNTRY_DIAL: Record<string, string> = {
+  SG: "+65",
+  MY: "+60",
+  TH: "+66",
+  ID: "+62",
+};
 const DEFAULT_CODE = "SG";
 const codeToLabel = (code?: string | null) =>
   COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
+
+/** Normalisasi nomor: hilangkan semua non-digit, buang 0 di depan. */
+const normalizeNumber = (raw?: string) => {
+  const digits = String(raw || "").replace(/\D+/g, "");
+  return digits.replace(/^0+/, "");
+};
 
 const registerSchema = z
   .object({
@@ -54,6 +61,7 @@ export default function RegisterPage() {
   const [country, setCountry] = useState<string | null>(null);
   const router = useRouter();
 
+  // Ambil negara dari localStorage.guestRegion (SG/MY/TH/ID)
   useEffect(() => {
     try {
       const c = (localStorage.getItem("guestRegion") || "").toUpperCase();
@@ -80,6 +88,12 @@ export default function RegisterPage() {
     const label = codeToLabel(country);
     if (label) return label;
     return codeToLabel(DEFAULT_CODE) || DEFAULT_CODE;
+  }, [country]);
+
+  /** Dial code dinamis—fallback ke default */
+  const dialCode = useMemo(() => {
+    const c = (country || DEFAULT_CODE).toUpperCase();
+    return COUNTRY_DIAL[c] || COUNTRY_DIAL[DEFAULT_CODE];
   }, [country]);
 
   useEffect(() => {
@@ -187,11 +201,15 @@ export default function RegisterPage() {
               Phone Number
             </label>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px]">
-                +62
+              <span
+                className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none"
+                aria-label="Country dial code"
+              >
+                {dialCode}
               </span>
               <input
                 {...register("phoneNumber")}
+                inputMode="tel"
                 className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
                 placeholder="Enter your phone number"
               />

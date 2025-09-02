@@ -9,32 +9,41 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import api from "@/lib/axios";
-import { useAuthStore, User } from "@/store/authStore";
+import { isAxiosError } from "axios";
+import { useAuthStore } from "@/store/authStore";
+import type { User } from "@/store/authStore";
 
+// ===== Schemas & types =====
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
 });
-
 type LoginFormInputs = z.infer<typeof loginSchema>;
 
-interface ApiErrorResponse {
-  message: string;
-}
+type LoginResponse = { message: string; user: User };
+
+type PurchaseStatus = "NOT_VERIFIED" | "PENDING" | "REJECTED" | "VERIFIED";
+type PurchaseStatusResponse = {
+  status: PurchaseStatus;
+  reason?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+};
 
 export default function SignInPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
-  const setUser = useAuthStore((state) => state.setUser);
+  const setUser = useAuthStore((s) => s.setUser);
+
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
   });
-  const CONTENT_H = 590;
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -50,23 +59,33 @@ export default function SignInPage() {
     { label: "Leaderboard", href: "/leaderboard" },
   ];
 
-  const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
+  const onSubmit: SubmitHandler<LoginFormInputs> = async (payload) => {
     setApiError(null);
     try {
-      // baseURL sudah di-setting di instance axios, jadi tidak perlu ditulis lagi
-      const response = await api.post<{ user: User }>("/auth/login", data);
+      const { data } = await api.post<LoginResponse>("/auth/login", payload);
+      setUser(data.user);
 
-      setUser(response.data.user);
-
-      router.push("/dashboard");
-    } catch (error) {
-      const axiosError = error as { response?: { data?: ApiErrorResponse } };
-      setApiError(
-        axiosError.response?.data?.message ||
-          "Login failed. Please check your credentials."
+      const { data: pv } = await api.get<PurchaseStatusResponse>(
+        "/user/purchase-verification/status"
       );
+
+      if (pv.status === "REJECTED") {
+        const msg = encodeURIComponent(pv.reason ?? "");
+        router.replace(`/verify-purchase?method=RECEIPT&rejected=1&msg=${msg}`);
+      } else if (pv.status === "NOT_VERIFIED") {
+        router.replace("/verify-purchase?method=RECEIPT");
+      } else {
+        router.replace("/dashboard");
+      }
+    } catch (err: unknown) {
+      const msg = isAxiosError<{ message?: string }>(err)
+        ? err.response?.data?.message || err.message
+        : "Login failed. Please check your credentials.";
+      setApiError(msg);
     }
   };
+
+  const CONTENT_H = 590;
 
   return (
     <MobileShell
@@ -83,9 +102,9 @@ export default function SignInPage() {
             <label className="block text-[12px] mb-1 opacity-80">Email</label>
             <input
               {...register("email")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter Email here"
+              inputMode="email"
             />
             {errors.email && (
               <p className="text-red-500 text-xs mt-1">
@@ -101,8 +120,7 @@ export default function SignInPage() {
             <input
               {...register("password")}
               type="password"
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40
-                         focus:outline-none focus:border-white"
+              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter Password here"
             />
             {errors.password && (
@@ -127,9 +145,10 @@ export default function SignInPage() {
 
           <button
             type="submit"
-            className="w-full rounded-md bg-white text-black py-2 !mt-2 font-bold"
+            disabled={isSubmitting}
+            className="w-full rounded-md bg-white text-black py-2 !mt-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {isSubmitting ? "Logging in..." : "Login"}
           </button>
         </form>
 

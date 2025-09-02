@@ -11,16 +11,9 @@ import OverlayMenu from "@/components/OverlayMenu";
 import { useRouter } from "next/navigation";
 
 const COUNTRIES = [
-  { code: "ID", label: "Indonesia" },
   { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
   { code: "TH", label: "Thailand" },
-  { code: "KH", label: "Cambodia" },
-  { code: "VN", label: "Vietnam" },
-  { code: "PH", label: "Philippines" },
-  { code: "BN", label: "Brunei" },
-  { code: "LA", label: "Laos" },
-  { code: "MM", label: "Myanmar" },
 ];
 
 const CONTENT_H = 590;

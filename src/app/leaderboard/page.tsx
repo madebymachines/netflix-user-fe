@@ -12,16 +12,9 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 
 const COUNTRIES = [
-  { code: "ID", label: "Indonesia" },
   { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
   { code: "TH", label: "Thailand" },
-  { code: "KH", label: "Cambodia" },
-  { code: "VN", label: "Vietnam" },
-  { code: "PH", label: "Philippines" },
-  { code: "BN", label: "Brunei" },
-  { code: "LA", label: "Laos" },
-  { code: "MM", label: "Myanmar" },
 ];
 
 const codeToLabel = (code?: string | null) =>
@@ -30,13 +23,11 @@ const codeToLabel = (code?: string | null) =>
   "";
 
 type TimespanUI = "All Time" | "Weekly" | "Top Streak";
-const TIMESPAN_TO_QUERY: Record<
-  TimespanUI,
-  "alltime" | "weekly" | "topstreak"
-> = {
+
+const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "weekly" | "streak"> = {
   "All Time": "alltime",
   Weekly: "weekly",
-  "Top Streak": "topstreak",
+  "Top Streak": "streak",
 };
 
 type Row = {
@@ -194,6 +185,7 @@ export default function LeaderboardPage() {
           limit: 10,
         };
         if (!regionIsGlobal) params.region = regionCode;
+
         const { data } = await api.get<LeaderboardResponse>("/leaderboard", {
           params,
           signal: ctrl.signal,
@@ -350,7 +342,7 @@ export default function LeaderboardPage() {
                       @{r.username}
                     </div>
                     <div className="text-right pr-1">
-                      {r.points.toLocaleString("id-ID")}
+                      {(r?.points ?? 0).toLocaleString("id-ID")}
                     </div>
                   </div>
                 ))

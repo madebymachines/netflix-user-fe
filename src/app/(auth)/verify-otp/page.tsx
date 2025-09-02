@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
@@ -23,7 +23,8 @@ interface ApiErrorResponse {
 
 export default function VerifyOtpPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null); // State untuk error API
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const CONTENT_H = 590;
 
   const router = useRouter();
@@ -53,16 +54,23 @@ export default function VerifyOtpPage() {
     { label: "Leaderboard", href: "/leaderboard" },
   ];
 
+  const showToastThenRedirect = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => {
+      setToast(null);
+      router.push("/sign-in");
+    }, 2000);
+  };
+
   const onSubmit: SubmitHandler<OtpFormInputs> = async (data) => {
     if (!isValid) return;
-    setApiError(null); // Bersihkan error sebelumnya
+    setApiError(null);
     try {
       await axios.post(process.env.NEXT_PUBLIC_API_URL + "/auth/verify-email", {
         email,
         otp: data.otp,
       });
-      alert("Verification successful! You can now log in.");
-      router.push("/sign-in");
+      showToastThenRedirect("Verification successful! You can now log in.");
     } catch (error) {
       if (axios.isAxiosError<ApiErrorResponse>(error)) {
         setApiError(error.response?.data?.message || "Verification failed");
@@ -77,6 +85,14 @@ export default function VerifyOtpPage() {
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
       contentHeight={CONTENT_H}
     >
+      {toast && (
+        <div className="fixed z-50 left-1/2 top-4 -translate-x-1/2">
+          <div className="rounded-md bg-white text-black px-4 py-2 shadow-[0_10px_24px_rgba(0,0,0,.35)] font-semibold">
+            {toast}
+          </div>
+        </div>
+      )}
+
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -126,7 +142,6 @@ export default function VerifyOtpPage() {
             </button>
           </div>
 
-          {/* Menampilkan error API di sini */}
           {apiError && (
             <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
               {apiError}
