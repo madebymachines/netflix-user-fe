@@ -26,6 +26,11 @@ interface MeResponse {
   profile: User;
   stats: UserStats;
 }
+interface LoginResponse {
+  message: string;
+  user: User;
+  stats: UserStats;
+}
 
 interface AuthState {
   user: User | null;
@@ -33,18 +38,34 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   setUser: (user: User | null, stats?: UserStats | null) => void;
+
+  login: (payload: { email: string; password: string }) => Promise<void>;
+
   checkAuth: (opts?: { allowRefresh?: boolean }) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   stats: null,
   isAuthenticated: false,
   isLoading: true,
 
-  setUser: (user, stats = null) => {
-    set({ user, stats, isAuthenticated: !!user, isLoading: false });
+  setUser: (user, stats = null) =>
+    set({ user, stats, isAuthenticated: !!user, isLoading: false }),
+
+  // pakai cookie yang diset server. Kita hydrate dari response,
+  // tidak perlu token di body.
+  login: async (payload) => {
+    const { data } = await api.post<LoginResponse>("/auth/login", payload);
+    set({
+      user: data.user,
+      stats: data.stats,
+      isAuthenticated: true,
+      isLoading: false,
+    });
+    // opsi: verifikasi ulang dari server (mis. role berubah), tak wajib:
+    // await get().checkAuth({ allowRefresh: true });
   },
 
   checkAuth: async (opts) => {
@@ -71,9 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     try {
       await api.post("/auth/logout", null, { _skipAuthRefresh: true });
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     set({ user: null, stats: null, isAuthenticated: false });
   },
 }));
