@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -34,6 +32,7 @@ export default function VerifyPurchasePage() {
     const m = (sp.get("method") as Method) || "RECEIPT";
     setMethod(m);
     clearFile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sp]);
 
   useEffect(() => {
@@ -98,7 +97,7 @@ export default function VerifyPurchasePage() {
 
       const fd = new FormData();
       fd.append("receiptImage", file);
-      fd.append("type", method);
+      fd.append("type", method); // RECEIPT | MEMBER_GYM
 
       await api.post("/user/purchase-verification", fd, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -115,7 +114,6 @@ export default function VerifyPurchasePage() {
     }
   };
 
-  // ===== Text sesuai mode =====
   const title =
     method === "RECEIPT"
       ? rejected
@@ -133,15 +131,8 @@ export default function VerifyPurchasePage() {
   const uploadLabel =
     method === "RECEIPT" ? "Upload Receipt Here" : "Upload Card Photo Here";
 
-  // === Dropzone yang adaptif ===
-  // Base maksimal berbeda per mode; saat RE-VERIFY kita kecilkan sedikit.
-  const baseMaxH =
-    method === "MEMBER_GYM" ? (rejected ? 240 : 277) : rejected ? 280 : 320;
-
-  // Tinggi final: minimal 220px, mengisi sisa ruang, tapi tidak lebih dari baseMaxH.
-  const dropzoneStyle: React.CSSProperties = {
-    height: `clamp(220px, 100%, ${baseMaxH}px)`,
-  };
+  const maxDrop =
+    method === "MEMBER_GYM" ? (rejected ? 230 : 260) : rejected ? 270 : 300;
 
   return (
     <MobileShell
@@ -165,7 +156,7 @@ export default function VerifyPurchasePage() {
       {/* Content */}
       <form
         onSubmit={onSubmit}
-        className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white flex flex-col"
+        className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white flex flex-col min-h-full"
       >
         <p className="mb-3 text-center text-[11px] opacity-80">
           Choose Method to Verified Your Account!
@@ -221,17 +212,20 @@ export default function VerifyPurchasePage() {
           </div>
         )}
 
-        {/* Dropzone container mengambil sisa ruang */}
-        <div className="flex-1 flex items-stretch">
+        <div className="flex-1 min-h-0 flex items-stretch">
           <div
             onClick={openPicker}
-            onDrop={onDrop}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFiles(e.dataTransfer.files);
+            }}
             onDragOver={(e) => e.preventDefault()}
             className={[
               "relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20",
               preview ? "border-white/20" : "border-white/60 border-dashed",
+              "h-full min-h-[210px]",
             ].join(" ")}
-            style={dropzoneStyle}
+            style={{ maxHeight: `${maxDrop}px` }}
           >
             {!preview ? (
               <div className="pointer-events-none flex flex-col items-center gap-3">
@@ -283,7 +277,6 @@ export default function VerifyPurchasePage() {
           <p className="mt-2 text-center text-[12px] text-red-400">{error}</p>
         )}
 
-        {/* Submit (selalu muat di bawah) */}
         <button
           type="submit"
           disabled={!file || submitting}
