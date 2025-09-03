@@ -114,6 +114,7 @@ export default function VerifyPurchasePage() {
     }
   };
 
+  // Teks
   const title =
     method === "RECEIPT"
       ? rejected
@@ -131,6 +132,7 @@ export default function VerifyPurchasePage() {
   const uploadLabel =
     method === "RECEIPT" ? "Upload Receipt Here" : "Upload Card Photo Here";
 
+  // Batasi tinggi dropzone (lebih kecil saat Re-Verify)
   const maxDrop =
     method === "MEMBER_GYM" ? (rejected ? 230 : 260) : rejected ? 270 : 300;
 
@@ -139,7 +141,7 @@ export default function VerifyPurchasePage() {
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
       contentHeight={CONTENT_H}
     >
-      {/* Background */}
+      {/* BG */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -153,142 +155,151 @@ export default function VerifyPurchasePage() {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
-      {/* Content */}
+      {/* ===== Layout: area konten scroll + footer sticky ===== */}
       <form
         onSubmit={onSubmit}
-        className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white flex flex-col min-h-full"
+        className="relative z-10 min-h-[100dvh] w-full text-white flex flex-col"
       >
-        <p className="mb-3 text-center text-[11px] opacity-80">
-          Choose Method to Verified Your Account!
-        </p>
+        {/* Scroll area */}
+        <div className="flex-1 min-h-0 overflow-auto px-5 pt-5 pb-4">
+          <p className="mb-3 text-center text-[11px] opacity-80">
+            Choose Method to Verified Your Account!
+          </p>
 
-        {/* Toggle buttons */}
-        <div className="mx-auto mb-5 flex w-full max-w-[320px] gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("RECEIPT");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "RECEIPT"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            PRODUCT PURCHASE
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("MEMBER_GYM");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "MEMBER_GYM"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            GYM MEMBER
-          </button>
+          {/* Toggle */}
+          <div className="mx-auto mb-5 flex w-full max-w-[320px] gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMethod("RECEIPT");
+                clearFile();
+              }}
+              className={[
+                "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
+                method === "RECEIPT"
+                  ? "bg-white text-black shadow"
+                  : "border border-white/60 text-white",
+              ].join(" ")}
+            >
+              PRODUCT PURCHASE
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMethod("MEMBER_GYM");
+                clearFile();
+              }}
+              className={[
+                "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
+                method === "MEMBER_GYM"
+                  ? "bg-white text-black shadow"
+                  : "border border-white/60 text-white",
+              ].join(" ")}
+            >
+              GYM MEMBER
+            </button>
+          </div>
+
+          {/* Title & desc */}
+          <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
+            {title}
+          </h1>
+          <p className="mb-4 text-center text-[12px] leading-snug opacity-90">
+            {desc}
+          </p>
+
+          {/* Rejected reason */}
+          {rejected && (
+            <div className="mx-auto mb-3 flex max-w-[320px] items-start gap-2 rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
+              <AlertTriangle className="mt-[2px] h-4 w-4" />
+              <span>
+                {rejectMsg || "Reason: invalid or unreadable receipt."}
+              </span>
+            </div>
+          )}
+
+          {/* Dropzone */}
+          <div className="flex items-stretch">
+            <div
+              onClick={openPicker}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleFiles(e.dataTransfer.files);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              className={[
+                "relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20",
+                preview ? "border-white/20" : "border-white/60 border-dashed",
+                "min-h-[200px]",
+              ].join(" ")}
+              style={{ maxHeight: `${maxDrop}px` }}
+            >
+              {!preview ? (
+                <div className="pointer-events-none flex flex-col items-center gap-3">
+                  <Upload className="h-8 w-8 opacity-80" />
+                  <span className="text-[13px] opacity-90">{uploadLabel}</span>
+                </div>
+              ) : (
+                <>
+                  {/* Penting: object-contain agar gambar tak menambah tinggi */}
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="h-full w-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearFile();
+                    }}
+                    className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-red-600"
+                    aria-label="Remove file"
+                  >
+                    <Trash2 className="h-5 w-5 text-white" />
+                  </button>
+                </>
+              )}
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </div>
+          </div>
+
+          {method === "MEMBER_GYM" && (
+            <>
+              <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
+              <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
+                This verification is only for member of{" "}
+                <span className="font-extrabold">Fitness Verse</span>
+              </p>
+            </>
+          )}
+
+          {error && (
+            <p className="mt-2 text-center text-[12px] text-red-400">{error}</p>
+          )}
         </div>
 
-        {/* Title & description */}
-        <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
-          {title}
-        </h1>
-        <p className="mb-4 text-center text-[12px] leading-snug opacity-90">
-          {desc}
-        </p>
-
-        {/* Rejected reason */}
-        {rejected && (
-          <div className="mx-auto mb-3 flex max-w-[320px] items-start gap-2 rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
-            <AlertTriangle className="mt-[2px] h-4 w-4" />
-            <span>{rejectMsg || "Reason: invalid or unreadable receipt."}</span>
-          </div>
-        )}
-
-        <div className="flex-1 min-h-0 flex items-stretch">
-          <div
-            onClick={openPicker}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleFiles(e.dataTransfer.files);
-            }}
-            onDragOver={(e) => e.preventDefault()}
+        {/* Footer sticky (selalu kelihatan) */}
+        <div className="sticky bottom-0 left-0 right-0 px-5 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          <button
+            type="submit"
+            disabled={!file || submitting}
             className={[
-              "relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20",
-              preview ? "border-white/20" : "border-white/60 border-dashed",
-              "h-full min-h-[210px]",
+              "mx-auto block w-full max-w-[320px] rounded-md py-3 text-[13px] font-extrabold tracking-wide transition",
+              !file || submitting
+                ? "cursor-not-allowed bg-white/20 text-white/60"
+                : "bg-white text-black",
             ].join(" ")}
-            style={{ maxHeight: `${maxDrop}px` }}
           >
-            {!preview ? (
-              <div className="pointer-events-none flex flex-col items-center gap-3">
-                <Upload className="h-8 w-8 opacity-80" />
-                <span className="text-[13px] opacity-90">{uploadLabel}</span>
-              </div>
-            ) : (
-              <>
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="h-full w-full object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearFile();
-                  }}
-                  className="absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-red-600"
-                  aria-label="Remove file"
-                >
-                  <Trash2 className="h-5 w-5 text-white" />
-                </button>
-              </>
-            )}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-          </div>
+            {submitting ? "UPLOADING…" : "SUBMIT"}
+          </button>
         </div>
-
-        {method === "MEMBER_GYM" && (
-          <>
-            <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
-            <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
-              This verification is only for member of{" "}
-              <span className="font-extrabold">Fitness Verse</span>
-            </p>
-          </>
-        )}
-
-        {/* Error */}
-        {error && (
-          <p className="mt-2 text-center text-[12px] text-red-400">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={!file || submitting}
-          className={[
-            "mt-4 mx-auto block w-full max-w-[320px] rounded-md py-3 text-[13px] font-extrabold tracking-wide transition",
-            !file || submitting
-              ? "cursor-not-allowed bg-white/20 text-white/60"
-              : "bg-white text-black",
-          ].join(" ")}
-        >
-          {submitting ? "UPLOADING…" : "SUBMIT"}
-        </button>
       </form>
 
       <OverlayMenu
