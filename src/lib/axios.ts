@@ -1,6 +1,6 @@
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-declare module "axios" {
+declare module 'axios' {
   interface AxiosRequestConfig {
     _retry?: boolean;
     _skipAuthRefresh?: boolean;
@@ -8,12 +8,14 @@ declare module "axios" {
 }
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/v1",
+  // UBAH BAGIAN INI:
+  // Alih-alih menggunakan environment variable, kita arahkan ke path proxy.
+  baseURL: '/api/v1',
   withCredentials: true,
 });
 
 // Helper: deteksi endpoint auth
-const isAuthEndpoint = (url = ""): boolean =>
+const isAuthEndpoint = (url = ''): boolean =>
   /\/auth\/(login|refresh-tokens|logout)(?:$|\?)/.test(url);
 
 // Single-flight refresh
@@ -25,10 +27,10 @@ api.interceptors.response.use(
   async (error: AxiosError): Promise<never | AxiosResponse> => {
     const cfg = (error.config ?? {}) as AxiosRequestConfig;
     const status = error.response?.status;
-    const url = cfg.url ?? "";
+    const url = cfg.url ?? '';
 
     // Request yang dibatalkan (AbortController/dll)
-    if (error.code === "ERR_CANCELED") return Promise.reject(error);
+    if (error.code === 'ERR_CANCELED') return Promise.reject(error);
 
     // Bukan kandidat refresh
     if (
@@ -46,7 +48,7 @@ api.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true;
         refreshPromise = api
-          .post<void>("/auth/refresh-tokens", null, { withCredentials: true })
+          .post<void>('/auth/refresh-tokens', null, { withCredentials: true })
           .then(() => {});
       }
 
@@ -62,10 +64,10 @@ api.interceptors.response.use(
 
       // Refresh gagal → arahkan ke sign-in (hindari loop)
       if (
-        typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/sign-in")
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/sign-in')
       ) {
-        window.location.href = "/sign-in";
+        window.location.href = '/sign-in';
       }
       return Promise.reject(e);
     }
