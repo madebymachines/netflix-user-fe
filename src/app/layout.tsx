@@ -20,9 +20,7 @@ export default function RootLayout({
       <body
         className={`${urw.variable} ${gravtrac.variable} bg-black antialiased`}
       >
-        {/* <DesktopGate> */}
-        {children}
-        {/* </DesktopGate> */}
+        <DesktopGate>{children}</DesktopGate>
       </body>
     </html>
   );

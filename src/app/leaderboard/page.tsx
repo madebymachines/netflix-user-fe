@@ -12,8 +12,8 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 
 const COUNTRIES = [
-  { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
+  { code: "SG", label: "Singapore" },
   { code: "TH", label: "Thailand" },
 ];
 
@@ -150,7 +150,7 @@ export default function LeaderboardPage() {
       const ls = (localStorage.getItem("guestRegion") || "").toUpperCase();
       if (ls) return ls;
     }
-    return "SG";
+    return "MY";
   }, [user?.country, searchParams]);
 
   const [regionCode, setRegionCode] = useState<string>(homeRegionCode);
@@ -239,7 +239,7 @@ export default function LeaderboardPage() {
           src="/images/ball.png"
           alt=""
           fill
-          sizes="360px"
+          sizes="100vw"
           style={{ objectFit: "cover", objectPosition: "top" }}
           className="opacity-20"
           priority

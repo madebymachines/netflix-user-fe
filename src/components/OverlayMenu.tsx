@@ -1,8 +1,8 @@
-'use client';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import Header from './Header';
-import { useAuthStore } from '@/store/authStore';
+"use client";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import Header from "./Header";
+import { useAuthStore } from "@/store/authStore";
 
 type MenuItem = {
   label: string;
@@ -21,27 +21,27 @@ export default function OverlayMenu({
   items: MenuItem[];
   contentHeight?: number;
 }) {
-  const pathname = usePathname() || '/';
+  const pathname = usePathname() || "/";
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
 
   const isActive = (href?: string) => {
     if (!href) return false;
-    if (href === '/') return pathname === '/';
-    return pathname === href || pathname.startsWith(href + '/');
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
   };
 
   const handleLogout = async () => {
     await logout();
     onClose();
-    router.push('/sign-in'); // Redirect setelah logout
+    router.push("/sign-in"); // Redirect setelah logout
   };
 
   if (!open) return null;
 
   return (
     <div
-      className="absolute left-0 z-[80] w-[360px]"
+      className="absolute left-0 z-[80] w-full"
       style={{ top: -50, height: 50 + contentHeight }}
     >
       <div className="absolute inset-0 bg-black/75" onClick={onClose} />
@@ -52,7 +52,7 @@ export default function OverlayMenu({
         <nav className="px-5 pt-6 space-y-6">
           {items.map((it, i) => {
             // Khusus untuk item "Logout", kita override onClick-nya
-            if (it.label === 'Logout') {
+            if (it.label === "Logout") {
               return (
                 <button
                   key={i}
@@ -70,7 +70,7 @@ export default function OverlayMenu({
                 href={it.href}
                 onClick={onClose}
                 className={`block text-[20px] font-semibold ${
-                  isActive(it.href) ? 'text-red-500' : 'text-white'
+                  isActive(it.href) ? "text-red-500" : "text-white"
                 }`}
               >
                 {it.label}

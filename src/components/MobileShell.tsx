@@ -1,70 +1,52 @@
-// components/MobileShell.tsx
 import Header from "./Header";
 
 type Props = {
   children: React.ReactNode;
   header?: React.ReactNode;
-  /** Jika diisi (mis. 590), konten jadi fixed height. Jika dikosongkan → tinggi fleksibel. */
-  contentHeight?: number;
-  /** Kunci seluruh stage (header+konten) dengan overlay gelap */
+  contentHeight?: number; // kalau diisi → fixed height
   dimAll?: boolean;
-  /** Elemen yang tetap aktif di atas overlay (misal: CountryPill) */
   overlayChildren?: React.ReactNode;
 };
 
 export default function MobileShell({
   children,
   header,
-  contentHeight, // <- tidak ada default → biar bisa fleksibel
+  contentHeight,
   dimAll = false,
   overlayChildren,
 }: Props) {
   const fixed = typeof contentHeight === "number";
-  const stageH = fixed ? 50 + (contentHeight as number) : undefined;
+  const stageH = fixed ? 50 + contentHeight : undefined;
 
   return (
     <div className="w-full min-h-screen bg-black flex justify-center">
       <div
-        className="relative w-[360px]"
-        // Jika fixed, kita tetapkan tinggi container supaya overlay menutup header+konten
+        className="relative w-full max-w-screen-sm md:max-w-screen-md lg:max-w-screen-lg"
         style={fixed ? { height: stageH } : undefined}
       >
-        {/* Header 360x50 */}
-        <div className="absolute top-0 left-0 z-30">{header ?? <Header />}</div>
+        {/* Header full width */}
+        <div className="absolute top-0 left-0 right-0 z-30">
+          {header ?? <Header />}
+        </div>
 
-        {/* Konten */}
+        {/* Konten di bawah header */}
         <section
           className={`relative mt-[50px] ${fixed ? "overflow-hidden" : ""}`}
-          style={{
-            width: 360,
-            ...(fixed ? { height: contentHeight } : {}),
-          }}
+          style={{ height: fixed ? contentHeight : undefined, width: "100%" }}
         >
           {children}
         </section>
 
-        {/* Overlay pengunci menutupi header+konten */}
+        {/* Overlay full stage */}
         {dimAll && (
           <>
-            {/* Backdrop: kalau fixed pakai height spesifik; kalau fleksibel, isi container (inset-0) */}
             <div
-              className={`absolute z-40 bg-black/80 pointer-events-auto ${
-                fixed ? "" : "inset-0"
-              }`}
-              style={
-                fixed
-                  ? { top: 0, left: 0, width: 360, height: stageH }
-                  : undefined
-              }
+              className="absolute inset-0 z-40 bg-black/80 pointer-events-auto"
+              style={fixed ? { height: stageH } : undefined}
             />
-            {/* Slot untuk elemen yang tetap bisa diklik di atas overlay */}
             <div
-              className={`absolute z-50 ${fixed ? "" : "inset-0"}`}
-              style={
-                fixed
-                  ? { top: 0, left: 0, width: 360, height: stageH }
-                  : undefined
-              }
+              className="absolute inset-0 z-50"
+              style={fixed ? { height: stageH } : undefined}
             >
               {overlayChildren}
             </div>

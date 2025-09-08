@@ -12,18 +12,16 @@ import OverlayMenu from "@/components/OverlayMenu";
 
 /** ====== Master negara & dial code ====== */
 const COUNTRIES = [
-  { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
+  { code: "SG", label: "Singapore" },
   { code: "TH", label: "Thailand" },
-  { code: "ID", label: "Indonesia" }, // supaya +62 bisa muncul seperti screenshot
 ];
 const COUNTRY_DIAL: Record<string, string> = {
-  SG: "+65",
   MY: "+60",
+  SG: "+65",
   TH: "+66",
-  ID: "+62",
 };
-const DEFAULT_CODE = "SG";
+const DEFAULT_CODE = "MY";
 const codeToLabel = (code?: string | null) =>
   COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
 
@@ -61,7 +59,6 @@ export default function RegisterPage() {
   const [country, setCountry] = useState<string | null>(null);
   const router = useRouter();
 
-  // Ambil negara dari localStorage.guestRegion (SG/MY/TH/ID)
   useEffect(() => {
     try {
       const c = (localStorage.getItem("guestRegion") || "").toUpperCase();

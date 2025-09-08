@@ -2,14 +2,63 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 import { useAuthStore } from "@/store/authStore";
+import api from "@/lib/axios";
+import { isAxiosError } from "axios";
+
+type PurchaseStatus = "NOT_VERIFIED" | "PENDING" | "REJECTED" | "APPROVED";
+type PurchaseStatusResponse = {
+  status: PurchaseStatus;
+  reason?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+};
 
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, stats, isLoading } = useAuthStore();
+  const router = useRouter();
+
+  // Redirect ke verify-purchase jika belum lolos verifikasi
+  useEffect(() => {
+    if (isLoading) return;
+
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await api.get<PurchaseStatusResponse>(
+          "/user/purchase-verification/status",
+          { _skipAuthRefresh: true }
+        );
+
+        if (!active) return;
+
+        if (data.status === "REJECTED") {
+          const msg = encodeURIComponent(data.reason ?? "");
+          router.replace(
+            `/verify-purchase?method=RECEIPT&rejected=1&msg=${msg}`
+          );
+        } else if (data.status === "NOT_VERIFIED") {
+          router.replace("/verify-purchase?method=RECEIPT");
+        }
+        // PENDING/VERIFIED → tetap di dashboard
+      } catch (err: unknown) {
+        // Jika error auth, biarkan alur global yang menangani (interceptor akan redirect ke /sign-in)
+        if (isAxiosError(err)) {
+          // optional: log err.message
+          // console.debug("PV check failed:", err.message);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [isLoading, router]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -70,7 +119,7 @@ export default function DashboardPage() {
           src="/images/ball.png"
           alt=""
           fill
-          sizes="360px"
+          sizes="100vw"
           style={{ objectFit: "cover", objectPosition: "top" }}
           className="opacity-25"
           priority

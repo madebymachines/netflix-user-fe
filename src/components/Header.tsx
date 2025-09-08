@@ -21,7 +21,8 @@ export default function Header({
 }: Props) {
   return (
     <header
-      className={`w-[360px] h-[50px] bg-white/98 flex items-center justify-between px-3 ${className}`}
+      className={`w-full h-[50px] bg-white/98 flex items-center justify-between
+                  px-[clamp(12px,4vw,20px)] ${className}`}
     >
       <div className="flex items-center gap-2">
         {onBack ? (
@@ -36,7 +37,16 @@ export default function Header({
             <ArrowLeft className="w-6 h-6 text-black" />
           </button>
         ) : null}
-        <Image src={logoSrc} alt="Logo" width={48} height={32} priority />
+        {/* Logo responsive: tinggi tetap, lebar mengikuti */}
+        <Image
+          src={logoSrc}
+          alt="Logo"
+          width={96}
+          height={32}
+          priority
+          className="h-8 w-auto"
+          sizes="100vw"
+        />
       </div>
 
       <div className="flex items-center gap-2">

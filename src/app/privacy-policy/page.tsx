@@ -34,7 +34,7 @@ export default function PrivacyPolicyPage() {
           src="/images/ball.png"
           alt=""
           fill
-          sizes="360px"
+          sizes="100vw"
           style={{ objectFit: "cover", objectPosition: "top" }}
           className="opacity-25"
           priority

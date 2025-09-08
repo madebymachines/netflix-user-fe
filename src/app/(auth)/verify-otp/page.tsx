@@ -98,7 +98,7 @@ export default function VerifyOtpPage() {
           src="/images/ball.png"
           alt=""
           fill
-          sizes="360px"
+          sizes="100vs"
           style={{ objectFit: "cover", objectPosition: "top" }}
           className="opacity-25"
           priority

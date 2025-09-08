@@ -1,3 +1,4 @@
+// app/(whatever)/page.tsx  — LandingPage
 "use client";
 
 import Link from "next/link";
@@ -11,16 +12,21 @@ import OverlayMenu from "@/components/OverlayMenu";
 import { useRouter } from "next/navigation";
 
 const COUNTRIES = [
-  { code: "SG", label: "Singapore" },
   { code: "MY", label: "Malaysia" },
+  { code: "SG", label: "Singapore" },
   { code: "TH", label: "Thailand" },
 ];
 
-const CONTENT_H = 590;
-const BALL_H = 420;
-const BOTTOM_TO_ALIGN = CONTENT_H - BALL_H;
+const CONTENT_H = 590; // tinggi stage hero (tetap)
+const BALL_H = 420; // tinggi background bola (tetap)
 const GAP_AFTER_BALL = 20;
 const BTN_H = 40;
+
+// ==== POSISI VERTIKAL TETAP (px) ====
+const LOGO_TOP = 120; // posisi logo
+const BOTTLE_TOP = 240; // posisi botol
+const SCROLL_CUE_TOP = BALL_H + GAP_AFTER_BALL + BTN_H + 10;
+
 const STORAGE_KEY = "guestRegion";
 
 export default function LandingPage() {
@@ -77,7 +83,7 @@ export default function LandingPage() {
         dimAll={!unlocked}
         overlayChildren={
           !unlocked ? (
-            <div className="relative w-[360px] h-full">
+            <div className="relative h-full w-full">
               <div className="absolute left-1/2 -translate-x-1/2 top-[62px] pointer-events-auto">
                 <CountryPill
                   value={country}
@@ -90,14 +96,17 @@ export default function LandingPage() {
           ) : null
         }
       >
-        {/* BG bola */}
-        <div className="absolute top-0 left-0 w-full h-[420px]">
+        {/* BG bola (tinggi tetap) */}
+        <div
+          className="absolute top-0 left-0 w-full"
+          style={{ height: BALL_H }}
+        >
           <Image
             src="/images/ball.png"
             alt="Background ball"
             fill
             priority
-            sizes="360px"
+            sizes="100vw"
             style={{ objectFit: "cover", objectPosition: "top" }}
           />
         </div>
@@ -106,7 +115,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-20">
           {/* pill country saat sudah pilih */}
           {unlocked && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-4 z-30">
+            <div className="absolute left-1/2 -translate-x-1/2 top-6 z-30">
               <CountryPill
                 value={country}
                 onChange={onCountryChange}
@@ -116,9 +125,10 @@ export default function LandingPage() {
             </div>
           )}
 
+          {/* Logo: posisi Y tetap */}
           <div
             className="absolute left-1/2 -translate-x-1/2 z-20"
-            style={{ top: 148 }}
+            style={{ top: LOGO_TOP }}
           >
             <Image
               src="/images/logo2.png"
@@ -129,9 +139,10 @@ export default function LandingPage() {
             />
           </div>
 
+          {/* Botol: posisi Y tetap (pakai top, bukan bottom) */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
-            style={{ bottom: BOTTOM_TO_ALIGN }}
+            style={{ top: BOTTLE_TOP }}
           >
             <Image
               src="/images/bottle.png"
@@ -143,7 +154,7 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Tombol Unlock */}
+          {/* Tombol Unlock – posisikan segera setelah bola (tetap) */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{ top: BALL_H + GAP_AFTER_BALL }}
@@ -161,15 +172,15 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Scroll cue */}
+          {/* Scroll cue – tetap */}
           <button
             onClick={goMore}
             className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center text-white"
-            style={{ top: BALL_H + GAP_AFTER_BALL + BTN_H + 10 }}
+            style={{ top: SCROLL_CUE_TOP }}
             aria-label="Scroll to Learn More"
           >
             <span
-              className={`text-[14px] mb-1 ${unlocked ? "" : "opacity-60"}`}
+              className={`text-[14px] mb-4 ${unlocked ? "" : "opacity-60"}`}
             >
               Scroll to Learn More
             </span>
@@ -190,15 +201,15 @@ export default function LandingPage() {
         />
       </MobileShell>
 
-      {/* Section bawah */}
+      {/* Section bawah (lebar responsif, tinggi bebas) */}
       <section className="w-full bg-black flex justify-center">
-        <div className="relative w=[360px]" ref={moreRef}>
-          <div className="relative w-[360px] min-h=[940px] overflow-hidden">
+        <div className="relative w-full max-w-screen-md" ref={moreRef}>
+          <div className="relative w-full min-h-[940px] overflow-hidden">
             <Image
               src="/images/ball2.png"
               alt="Background lower"
               fill
-              sizes="360px"
+              sizes="100vw"
               style={{ objectFit: "cover", objectPosition: "top" }}
             />
             <div className="relative z-10 px-5 pt-8 pb-10 text-white">
@@ -206,15 +217,15 @@ export default function LandingPage() {
                 100 <span className="text-red-500">REWARDS</span> AWAIT!
               </h2>
 
-              <div className="mx-auto w-[215px] border border-white/10 rounded-md p-3">
+              <div className="mx-auto w-[250px] space-y-4 p-3">
                 {[
                   "100 FREE GYM MEMBERSHIPS & TRIALS",
                   "PHYSICAL ASIA EXCLUSIVE MERCHANDISE",
                   "MEET THE PHYSICAL ASIA WINNER",
                 ].map((t, i) => (
-                  <div key={i} className="flex items-start gap-3 py-2">
-                    <span className="mt-1 inline-block h-7 w-7 rounded-full bg-white/10 border border-white/20" />
-                    <p className="text-[12px] leading-tight">{t}</p>
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="h-7 w-7 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+                    <p className="text-[12px] leading-snug">{t}</p>
                   </div>
                 ))}
               </div>
@@ -223,9 +234,13 @@ export default function LandingPage() {
                 GUIDE TO <span className="text-red-500">JOIN</span>
               </h3>
 
-              <div className="mx-auto w-[280px] border border-white/10 rounded-md p-4">
+              {/* GUIDE TO JOIN – zigzag tetap */}
+              <div className="relative mx-auto w-[300px] rounded-md border border-white/10 px-4 text-white isolate">
                 {[
-                  { n: "01", t: "Upload Receipt to unlock the challenge." },
+                  {
+                    n: "01",
+                    t: "Upload receipt or membership upload to unlock the challenge.",
+                  },
                   {
                     n: "02",
                     t: "Every rep you complete in the challenge converts into points.",
@@ -238,26 +253,42 @@ export default function LandingPage() {
                     n: "04",
                     t: "Compete on the leaderboard to win Weekly, Monthly, Most Consistent, and Grand Prizes.",
                   },
-                ].map((s, i) => (
-                  <div key={i} className="grid grid-cols-[28px_1fr] gap-3 py-3">
-                    <span className="h-7 w-7 rounded-full bg-white/10 border border-white/20" />
-                    <div>
-                      <div className="text-[18px] font-extrabold leading-none mb-1">
-                        {s.n}
-                      </div>
-                      <p className="text-[12px] leading-tight opacity-90">
-                        {s.t}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                ].map((s, i) => {
+                  const INDENT = 36;
+                  const CIRCLE_L = -28;
+                  const CIRCLE_R = -10;
+                  const isZag = i % 2 === 1;
+                  const indent = isZag ? INDENT : 0;
+                  const circleLeft = isZag ? CIRCLE_R : CIRCLE_L;
 
-                <Link
+                  return (
+                    <div
+                      key={i}
+                      className="relative py-5"
+                      style={{ marginLeft: indent }}
+                    >
+                      <span
+                        className="absolute h-10 w-10 rounded-full bg-white/10 border border-white/20 pointer-events-none"
+                        style={{ left: circleLeft }}
+                      />
+                      <div className="pl-12">
+                        <div className="text-[22px] font-extrabold leading-none mb-1">
+                          {s.n}
+                        </div>
+                        <p className="text-[12px] leading-snug opacity-90">
+                          {s.t}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <a
                   href={leaderboardHref}
-                  className="mt-3 inline-block text-[12px] font-semibold underline text-red-500"
+                  className="inline-block text-[12px] font-semibold underline text-red-500 pl-20"
                 >
                   Leaderboard
-                </Link>
+                </a>
               </div>
             </div>
           </div>
