@@ -235,7 +235,7 @@ export default function LandingPage() {
               </h3>
 
               {/* GUIDE TO JOIN – zigzag tetap */}
-              <div className="relative mx-auto w-[300px] rounded-md border border-white/10 px-4 text-white isolate">
+              <div className="relative mx-auto w-[300px] rounded-md px-4 text-white isolate">
                 {[
                   {
                     n: "01",
