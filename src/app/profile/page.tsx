@@ -17,8 +17,6 @@ type FormState = {
   phone: string;
 };
 
-const CONTENT_H = 590;
-
 export default function ProfilePage() {
   const router = useRouter();
 
@@ -38,7 +36,7 @@ export default function ProfilePage() {
 
   // ==== Avatar state ====
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string>(""); // preview (blob)
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
@@ -154,7 +152,7 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen w-full bg-black text-white">
+      <div className="flex items-center justify-center min-h-screen w-full bg-black text-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
           <p>Loading profile...</p>
@@ -168,7 +166,6 @@ export default function ProfilePage() {
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
-      contentHeight={CONTENT_H}
     >
       {/* Toast */}
       {toast && (
@@ -193,7 +190,7 @@ export default function ProfilePage() {
         <div className="absolute inset-0 bg-black/15" />
       </div>
 
-      <div className="relative z-10 h-full w-full px-5 pt-4 text-white">
+      <div className="relative z-10 w-full px-5 pt-4 pb-8 text-white">
         <h1 className="font-heading text-[28px] tracking-[.02em] mb-3">
           Profile
         </h1>
@@ -298,7 +295,6 @@ export default function ProfilePage() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         items={authMenu}
-        contentHeight={CONTENT_H}
       />
     </MobileShell>
   );

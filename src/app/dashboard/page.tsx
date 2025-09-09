@@ -45,12 +45,9 @@ export default function DashboardPage() {
         } else if (data.status === "NOT_VERIFIED") {
           router.replace("/verify-purchase?method=RECEIPT");
         }
-        // PENDING/VERIFIED → tetap di dashboard
       } catch (err: unknown) {
-        // Jika error auth, biarkan alur global yang menangani (interceptor akan redirect ke /sign-in)
         if (isAxiosError(err)) {
-          // optional: log err.message
-          // console.debug("PV check failed:", err.message);
+          // biarkan interceptor auth yang handle
         }
       }
     })();
@@ -67,8 +64,6 @@ export default function DashboardPage() {
       document.body.style.overflow = prev;
     };
   }, [menuOpen]);
-
-  const CONTENT_H = 590;
 
   const userDisplayData = {
     name: user?.name ?? "User",
@@ -111,7 +106,7 @@ export default function DashboardPage() {
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
-      contentHeight={CONTENT_H}
+      /* tidak pakai contentHeight -> tinggi halaman fleksibel */
     >
       {/* BG */}
       <div className="absolute inset-0">
@@ -127,10 +122,11 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
+      {/* Konten – tanpa h-full, biarkan tinggi alami mengikuti isi */}
       <div
-        className="relative z-10 h-full w-full overflow-hidden text-white grid justify-items-center"
+        className="relative z-10 w-full overflow-visible text-white grid justify-items-center pb-10"
         style={{
-          gridTemplateRows: "73px 116px 64px 160px 56px",
+          gridTemplateRows: "73px 116px 64px 160px auto",
           rowGap: "8px",
         }}
       >
@@ -223,7 +219,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Stats */}
-        <section className="w/[320px] h-[64px] grid grid-cols-3 w-[320px]">
+        <section className="grid grid-cols-3 w-[320px] h-[64px]">
           {statsCards.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className="font-heading tabular-nums text-[28px] leading-none">
@@ -300,7 +296,6 @@ export default function DashboardPage() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         items={authMenu}
-        contentHeight={CONTENT_H}
       />
     </MobileShell>
   );
