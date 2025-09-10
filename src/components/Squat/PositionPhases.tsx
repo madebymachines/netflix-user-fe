@@ -24,8 +24,8 @@ export const PositionBeforeHydrate: React.FC<PositionComponentProps> = ({
   phase 
 }) => {
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 bg-black overflow-hidden flex-1" 
+    <div className="flex flex-col">
+      <div className="relative mx-auto bg-black overflow-hidden flex-1" 
       style={{ 
         aspectRatio: '3/4',
         width: '100%',
@@ -95,8 +95,8 @@ export const PositionBeforeRecovery: React.FC<PositionComponentProps> = ({
   phase 
 }) => {
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 mb-4 bg-black overflow-hidden" style={{ 
+    <div className="flex flex-col">
+      <div className="relative mx-auto mb-4 bg-black overflow-hidden" style={{ 
         aspectRatio: '3/4',
         width: '100%',
         maxWidth: 'min(90vw, 60vh * 0.75)',

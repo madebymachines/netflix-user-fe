@@ -220,7 +220,7 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
               
               {/* ROUND text - positioned absolutely to left with DEBUG BORDER */}
               <div 
-                className="absolute left-4 bottom-0 transform -rotate-90 origin-bottom-left" 
+                className="absolute left-4 -bottom-2 transform -rotate-90 origin-bottom-left" 
                 style={{ 
                   transformOrigin: 'left bottom',
                   marginLeft: '20px',
@@ -235,7 +235,7 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
               
               {/* Count number - centered absolutely with DEBUG BORDER */}
               <div 
-                className="absolute inset-0 flex items-center justify-center mt-4"
+                className="absolute inset-0 flex items-center justify-center"
               >
                 <span 
                   className="text-[#FF0000] text-[120px] font-vancouver font-regular leading-none"
