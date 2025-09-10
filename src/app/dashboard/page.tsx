@@ -18,12 +18,27 @@ type PurchaseStatusResponse = {
   reviewedAt?: string | null;
 };
 
+type WeeklyAPI = {
+  weekly: {
+    senin: number;
+    selasa: number;
+    rabu: number;
+    kamis: number;
+    jumat: number;
+    sabtu: number;
+    minggu: number;
+  };
+  averageRepsPerDay: number;
+  averageChallengePerWeek: number;
+};
+
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [weeklyApi, setWeeklyApi] = useState<WeeklyAPI | null>(null);
+
   const { user, stats, isLoading } = useAuthStore();
   const router = useRouter();
 
-  // Redirect ke verify-purchase jika belum lolos verifikasi
   useEffect(() => {
     if (isLoading) return;
 
@@ -78,12 +93,44 @@ export default function DashboardPage() {
     { value: stats?.totalCalori ?? 0, l1: "BURNED", l2: "KCAL" },
   ];
 
-  const weekly = [9, 6, 8, 5, 7, 3, 2];
-  const barHeights = useMemo(
-    () => weekly.map((v) => `${Math.max(0, Math.min(10, v)) * 10}%`),
-    [weekly]
-  );
-  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { data } = await api.get<WeeklyAPI>(
+          "/activities/stats/weekly-workout"
+        );
+        if (!active) return;
+        setWeeklyApi(data);
+      } catch (e) {
+        console.warn("Failed to fetch weekly workout", e);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const dayOrder = [
+    "senin",
+    "selasa",
+    "rabu",
+    "kamis",
+    "jumat",
+    "sabtu",
+    "minggu",
+  ] as const;
+  const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const dayValues: number[] = useMemo(() => {
+    if (!weeklyApi) return [0, 0, 0, 0, 0, 0, 0];
+    return dayOrder.map((k) => Math.max(0, weeklyApi.weekly[k]));
+  }, [weeklyApi]);
+
+  const maxVal = Math.max(1, ...dayValues);
+  const barHeights = dayValues.map((v) => `${(v / maxVal) * 100}%`);
+  const challengePerWeek = weeklyApi?.averageChallengePerWeek ?? 0;
+  const avgRepsPerDay = weeklyApi?.averageRepsPerDay ?? 0;
 
   const authMenu = [
     { label: "Dashboard", href: "/dashboard" },
@@ -106,7 +153,6 @@ export default function DashboardPage() {
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
-      /* tidak pakai contentHeight -> tinggi halaman fleksibel */
     >
       {/* BG */}
       <div className="absolute inset-0">
@@ -122,7 +168,6 @@ export default function DashboardPage() {
         <div className="absolute inset-0 bg-black/20" />
       </div>
 
-      {/* Konten – tanpa h-full, biarkan tinggi alami mengikuti isi */}
       <div
         className="relative z-10 w-full overflow-visible text-white grid justify-items-center pb-10"
         style={{
@@ -143,42 +188,39 @@ export default function DashboardPage() {
 
         {/* Row profil */}
         <section className="w-[320px] h-[116px] flex items-center">
-          <div
-            className="relative w-[101px] h-[116px] p-[7px] shrink-0"
-            style={{
-              clipPath:
-                "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)",
-              background:
-                "linear-gradient(180deg,#bdbdbd 0%,#6b6b6b 50%,#d1d1d1 100%)",
-            }}
-          >
+          <div className="relative w-[116px] h-[116px] shrink-0">
             <div
-              className="relative w-full h-full overflow-hidden"
-              style={{
-                clipPath:
-                  "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)",
-                background:
-                  "radial-gradient(120% 120% at 50% 10%,#3d3d3d,#171717 70%)",
-                border: "2px solid #ff2a2a",
-                boxShadow:
-                  "0 0 10px rgba(255,42,42,.6), inset 0 0 18px rgba(255,42,42,.35)",
-              }}
+              className="
+        absolute inset-[18%] overflow-hidden
+        [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]
+      "
             >
               <Image
                 src={userDisplayData.photoUrl || "/images/bottle.png"}
                 alt="User"
                 fill
-                sizes="120px"
+                sizes="116px"
                 style={{ objectFit: "cover" }}
-                className="opacity-85"
+                priority
               />
             </div>
+
+            {/* FRAME */}
+            <Image
+              src="/images/f_legendary.png"
+              alt="Legendary frame"
+              fill
+              sizes="116px"
+              style={{ objectFit: "contain" }}
+              priority
+              className="pointer-events-none select-none"
+            />
           </div>
 
           <div className="w-[74px] h-[116px] grid place-items-center shrink-0">
             <Image
               src="/images/legendary.png"
-              alt="Legendary"
+              alt="Legendary Badge"
               width={74}
               height={116}
               priority
@@ -186,18 +228,20 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="flex-1 h-[116px] flex flex-col justify-center pl-2">
+          {/* data pengguna */}
+          <div className="flex-1 h-[116px] flex flex-col justify-center">
             <div className="font-heading text-[12px] tracking-[.02em] leading-none">
               {userDisplayData.name}
             </div>
             <div className="flex items-end gap-2">
-              <div className="leading-none">
+              {/* Physical Points */}
+              <div className="flex flex-col items-center justify-end h-[55px]">
                 <div className="font-heading tabular-nums text-[30px] text-red-500 leading-none">
                   {Intl.NumberFormat("id-ID").format(userDisplayData.points)}
                 </div>
-                <div className="font-heading text-[9px] uppercase tracking-widest text-red-500">
+                <span className="font-heading text-[9px] uppercase tracking-widest text-red-500 whitespace-nowrap pt-1">
                   Physical Points
-                </div>
+                </span>
               </div>
 
               <a
@@ -206,11 +250,11 @@ export default function DashboardPage() {
               >
                 <svg
                   viewBox="0 0 24 24"
-                  className="h-[30px] w-[30px] fill-none stroke-[2] stroke-red-500"
+                  className="h-[40px] w-[40px] fill-none stroke-[2] stroke-red-500"
                 >
                   <path d="M4 21h16M6 21v-6h4v6M14 21V8h4v13M10 21V12h4v9" />
                 </svg>
-                <span className="font-heading text-[9px] uppercase tracking-widest text-red-500 -mt-0.5">
+                <span className="font-heading text-[9px] uppercase tracking-widest text-red-500 pt-1">
                   Leaderboard
                 </span>
               </a>
@@ -240,42 +284,47 @@ export default function DashboardPage() {
             <div className="font-heading text-[12px] tracking-[.02em]">
               WEEKLY WORKOUTS
             </div>
+
             <div className="mt-1 flex justify-between">
               <div className="w-[193px] h-[109px]">
                 <div className="flex items-end gap-[10px] h-[90px]">
-                  {barHeights.map((h, i) => (
-                    <div
-                      key={i}
-                      className="w-[14px] rounded-t-md"
-                      style={{
-                        height: h,
-                        background:
-                          i % 2 === 0
+                  {barHeights.map((h, i) => {
+                    const isActive = dayValues[i] > 0;
+                    return (
+                      <div
+                        key={i}
+                        className="w-[14px] rounded-t-md transition-[height] duration-300"
+                        style={{
+                          height: h,
+                          background: isActive
                             ? "linear-gradient(180deg,#ff3b3b,#a40012)"
                             : "linear-gradient(180deg,#6a6a6a,#434343)",
-                      }}
-                    />
-                  ))}
+                        }}
+                        title={`${dayLabels[i]}: ${dayValues[i]}`}
+                      />
+                    );
+                  })}
                 </div>
                 <div className="mt-[6px] grid grid-cols-7 text-center text-[9px] opacity-90">
-                  {DAYS.map((d, idx) => (
-                    <div key={`${d}-${idx}`}>{d[0]}</div>
+                  {dayLabels.map((d, idx) => (
+                    <div key={idx}>{d[0]}</div>
                   ))}
                 </div>
               </div>
 
-              <div className="w-[56px] h-[102px] text-right mr-1">
+              <div className="w-[56px] h-[102px] text-right mr-4">
                 <div className="font-heading tabular-nums text-[30px] leading-none">
-                  32
+                  {Intl.NumberFormat("id-ID").format(challengePerWeek)}
                 </div>
                 <div className="font-heading text-[9px] uppercase tracking-widest opacity-90">
-                  Challenge/Week
+                  CHALLENGE/WEEK
                 </div>
-                <div className="mt-[4px] font-heading tabular-nums text-[30px] leading-none">
-                  604
+
+                <div className="mt-[24px] font-heading tabular-nums text-[30px] leading-none">
+                  {Intl.NumberFormat("id-ID").format(avgRepsPerDay)}
                 </div>
                 <div className="font-heading text-[9px] uppercase tracking-widest opacity-90">
-                  Avg.Reps/Day
+                  AVG.REPS/DAY
                 </div>
               </div>
             </div>
