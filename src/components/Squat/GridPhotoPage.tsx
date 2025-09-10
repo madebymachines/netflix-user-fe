@@ -515,7 +515,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
           )}
 
           {/* Submission Status */}
-          {isSubmittingActivity && (
+          {/* {isSubmittingActivity && (
             <div className="w-full max-w-sm mb-2 p-2 bg-yellow-900 text-yellow-200 text-center rounded-md text-sm">
               Submitting your challenge results...
             </div>
@@ -531,7 +531,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             <div className="w-full max-w-sm mb-2 p-2 bg-red-900 text-red-200 text-center rounded-md text-sm">
               ⚠ {submissionError}
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Share Button */}
