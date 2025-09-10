@@ -1,7 +1,4 @@
-// AudioUtils.tsx - Enhanced version with audio context and testing
-let isCurrentlySpeaking = false;
-let currentUtterance: SpeechSynthesisUtterance | null = null;
-let lastSpokenText = '';
+// AudioUtils.tsx - Fixed version for mobile compatibility
 let audioContext: AudioContext | null = null;
 let isAudioEnabled = false;
 
@@ -61,8 +58,8 @@ export const testAudio = async (): Promise<boolean> => {
       }
     }
     
-    // Test speech synthesis with a short phrase
-    await speakText('', 1.0, 0.8);
+    // Test with actual text instead of empty string
+    await speakText('test', 1.0, 0.8);
     console.log('Audio test completed successfully');
     return true;
   } catch (error) {
@@ -71,7 +68,7 @@ export const testAudio = async (): Promise<boolean> => {
   }
 };
 
-// Enhanced number mapping for better pronunciation
+// Complete number mapping for better pronunciation
 const englishNumbers: Record<number, string> = {
   1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five',
   6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten',
@@ -153,103 +150,71 @@ const selectVoice = (): SpeechSynthesisVoice | null => {
   return selectedVoice;
 };
 
-// Enhanced speak text function with promise support
-const speakText = (text: string, rate: number = 1.0, volume: number = 0.8, force: boolean = false): Promise<void> => {
+// Simplified speak text function based on working .js version
+const speakText = (text: string, rate: number = 1.0, volume: number = 0.8): Promise<void> => {
   return new Promise((resolve) => {
-    // Skip if same text was just spoken (unless forced)
-    if (!force && (isCurrentlySpeaking || text === lastSpokenText)) {
-      console.log('Skipping duplicate or overlapping speech:', text);
-      resolve();
-      return;
-    }
-
+    // Check if speech synthesis is available
     if (!('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported');
       resolve();
       return;
     }
-
+    
     // Enable audio context if not already enabled
     if (!isAudioEnabled) {
       initAudioContext();
     }
-
-    // Set flag immediately
-    isCurrentlySpeaking = true;
-    lastSpokenText = text;
-
-    // Cancel any existing speech first
-    if (speechSynthesis.speaking) {
-      speechSynthesis.cancel();
-    }
-
-    // Short delay to ensure cancellation
+    
+    // Cancel any ongoing speech
+    speechSynthesis.cancel();
+    
+    // Small delay to ensure cancellation is processed
     setTimeout(() => {
       try {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
         utterance.volume = volume;
         utterance.pitch = 1.0;
-
+        
         // Set voice
         const voice = selectVoice();
         if (voice) {
           utterance.voice = voice;
           console.log('Using voice:', voice.name, voice.lang);
+        } else {
+          console.warn('No suitable voice found');
         }
-
-        currentUtterance = utterance;
-
+        
+        // Add event listeners
         utterance.onstart = () => {
           console.log('Speech started:', text);
-          isCurrentlySpeaking = true;
         };
-
+        
         utterance.onend = () => {
           console.log('Speech ended:', text);
-          isCurrentlySpeaking = false;
-          currentUtterance = null;
-          // Clear lastSpokenText after completion to allow repeat if needed
-          setTimeout(() => {
-            if (lastSpokenText === text) {
-              lastSpokenText = '';
-            }
-          }, 1000);
           resolve();
         };
-
+        
         utterance.onerror = (event) => {
-          console.log('Speech error:', event.error, text);
-          isCurrentlySpeaking = false;
-          currentUtterance = null;
-          lastSpokenText = '';
+          console.error('Speech error:', event.error, text);
           resolve(); // Resolve instead of reject to continue app flow
         };
-
+        
         speechSynthesis.speak(utterance);
-
-        // Safety timeout
+        
+        // Fallback timeout in case speech doesn't work
         setTimeout(() => {
-          if (isCurrentlySpeaking && currentUtterance === utterance) {
-            console.log('Speech timeout, force stopping:', text);
-            isCurrentlySpeaking = false;
-            currentUtterance = null;
-            lastSpokenText = '';
-            if (speechSynthesis.speaking) {
-              speechSynthesis.cancel();
-            }
-            resolve();
+          if (speechSynthesis.speaking) {
+            speechSynthesis.cancel();
           }
-        }, 6000);
-
+          resolve();
+        }, 5000); // 5 second timeout
+        
       } catch (error) {
-        console.error('Speech error:', error);
-        isCurrentlySpeaking = false;
-        currentUtterance = null;
-        lastSpokenText = '';
+        console.error('Error speaking text:', error);
         resolve();
       }
-    }, 150);
+    }, 100);
   });
 };
 
@@ -269,10 +234,10 @@ export const playCountSound = async (count: number): Promise<void> => {
   }
 };
 
-export const playAnnouncement = async (text: string, force: boolean = false): Promise<void> => {
-  console.log('playAnnouncement called:', text, 'force:', force);
+export const playAnnouncement = async (text: string): Promise<void> => {
+  console.log('playAnnouncement called:', text);
   try {
-    await speakText(text, 1.0, 0.9, force);
+    await speakText(text, 1.0, 0.9);
   } catch (error) {
     console.error('Error playing announcement:', error);
   }
@@ -280,9 +245,6 @@ export const playAnnouncement = async (text: string, force: boolean = false): Pr
 
 export const stopAllAudio = (): void => {
   console.log('Stopping all audio');
-  isCurrentlySpeaking = false;
-  currentUtterance = null;
-  lastSpokenText = '';
   if (speechSynthesis.speaking) {
     speechSynthesis.cancel();
   }
@@ -293,7 +255,6 @@ export const getAudioState = () => {
   return {
     isAudioEnabled,
     audioContextState: audioContext?.state,
-    isCurrentlySpeaking,
     speechSynthesisSupported: 'speechSynthesis' in window,
     voicesCount: speechSynthesis.getVoices().length
   };
