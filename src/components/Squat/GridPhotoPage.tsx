@@ -198,7 +198,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             if (i === 0) {
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
-              const bannerHeight = 28;
+              const bannerHeight = 25;
               const bannerY = y + photoHeight * 0.55;
               
               // Progress percentage (you can make this dynamic based on your app state)
@@ -243,7 +243,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               // Black subtitle banner (unchanged)
               const gap = 5;
               const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 20;
+              const blackBannerHeight = 18;
               const blackBannerWidth = photoWidth * 0.75;
               const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
               
@@ -288,7 +288,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             else if (i === 2) {
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
-              const bannerHeight = 28;
+              const bannerHeight = 25;
               const bannerY = y + photoHeight * 0.55;
               
               // Progress percentage (you can make this dynamic based on your app state)
@@ -332,7 +332,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               // Black subtitle banner - adjust width to fit text
               const gap = 5;
               const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 20;
+              const blackBannerHeight = 18;
               
               // Measure text width and add padding
               ctx.font = 'bold 10px "URW Geometric"';
@@ -432,7 +432,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 15px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.translate(statsCenterX + 200, statsCenterY + 2);
+      ctx.translate(statsCenterX + 150, statsCenterY - 35);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
