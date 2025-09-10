@@ -28,8 +28,8 @@ export const PositionBeforeHydrate: React.FC<PositionComponentProps> = ({
       <div className="relative mx-auto bg-black overflow-hidden" 
       style={{ 
         aspectRatio: '3/4',
-        width: '100%',
-        maxWidth: 'min(90vw, 60vh * 0.75)',
+        // width: '100%',
+        // maxWidth: 'min(90vw, 60vh * 0.75)',
         height: 'auto',
         maxHeight: '60vh',
         minHeight: '300px',
@@ -98,8 +98,8 @@ export const PositionBeforeRecovery: React.FC<PositionComponentProps> = ({
     <div className="flex flex-col">
       <div className="relative mx-auto mb-4 bg-black overflow-hidden" style={{ 
         aspectRatio: '3/4',
-        width: '100%',
-        maxWidth: 'min(90vw, 60vh * 0.75)',
+        // width: '100%',
+        // maxWidth: 'min(90vw, 60vh * 0.75)',
         height: 'auto',
         maxHeight: '60vh',
         minHeight: '300px',

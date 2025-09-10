@@ -42,8 +42,8 @@ export const HydratePhase: React.FC<ProgressPhaseProps> = ({
     <div className="flex-1 flex flex-col">
       <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
         aspectRatio: '3/4',
-        width: '100%',
-        maxWidth: 'min(90vw, 60vh * 0.75)',
+        // width: '100%',
+        // maxWidth: 'min(90vw, 60vh * 0.75)',
         height: 'auto',
         maxHeight: '60vh',
         minHeight: '300px',
@@ -88,12 +88,12 @@ export const HydratePhase: React.FC<ProgressPhaseProps> = ({
             </div>
 
             <div className="relative bg-black text-white rounded-[10px] mb-2 overflow-hidden flex items-center justify-center" 
-                style={{ width: '240px', height: '38px' }}>
+                style={{ width: '240px', height: '38px', padding: '8px' }}>
               <div 
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
               />
-              <span className="relative z-10 text-[30px] font-vancouver font-regular">HYDRATE AND ENERGIZE</span>
+              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-tight">HYDRATE AND ENERGIZE</span>
             </div>
           </div>
         </div>
@@ -116,8 +116,8 @@ export const RecoveryPhase: React.FC<ProgressPhaseProps> = ({
     <div className="flex-1 flex flex-col">
       <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
         aspectRatio: '3/4',
-        width: '100%',
-        maxWidth: 'min(90vw, 60vh * 0.75)',
+        // width: '100%',
+        // maxWidth: 'min(90vw, 60vh * 0.75)',
         height: 'auto',
         maxHeight: '60vh',
         minHeight: '300px',
@@ -162,12 +162,12 @@ export const RecoveryPhase: React.FC<ProgressPhaseProps> = ({
             </div>
 
             <div className="relative bg-black text-white rounded-[10px] mb-2 overflow-hidden flex items-center justify-center" 
-              style={{ width: '240px', height: '38px' }}>
+              style={{ width: '240px', height: '38px', padding: '8px' }}>
               <div 
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
               />
-              <span className="relative z-10 text-[30px] font-vancouver font-regular">RECOVER &amp; REPEAT</span>
+              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-tight">RECOVER &amp; REPEAT</span>
             </div>
           </div>
         </div>
