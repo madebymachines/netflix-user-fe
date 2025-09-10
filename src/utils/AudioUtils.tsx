@@ -59,7 +59,7 @@ export const testAudio = async (): Promise<boolean> => {
     }
     
     // Test with actual text instead of empty string
-    await speakText('test', 1.0, 0.8);
+    await speakText('', 1.0, 0.8);
     console.log('Audio test completed successfully');
     return true;
   } catch (error) {

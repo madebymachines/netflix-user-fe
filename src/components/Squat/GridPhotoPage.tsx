@@ -389,7 +389,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       }
       
       // Draw stats section with proper spacing
-      const statsStartY = gridStartY + gridHeight + 30; // Added 30px gap between grid and stats
+      const statsStartY = gridStartY + gridHeight + 15;
       const statsHeight = 120;
       
       ctx.fillStyle = '#000000';
@@ -410,7 +410,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.translate(statsCenterX - 60, statsCenterY + 2);
+      ctx.textBaseline = 'middle'; 
+      ctx.translate(statsCenterX - 60, statsCenterY + 15); 
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
@@ -432,7 +433,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 15px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.translate(statsCenterX + 150, statsCenterY - 35);
+      ctx.textBaseline = 'middle'; 
+      ctx.translate(statsCenterX + 190, statsCenterY + 15);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
@@ -494,7 +496,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       className="w-full min-h-screen bg-black text-white flex flex-col" 
       style={{ 
         width: '100%',
-        maxWidth: 'min(90vw, 60vh * 0.75)', 
+        // maxWidth: 'min(90vw, 60vh * 0.75)', 
         margin: "0 auto" 
       }}
     >
