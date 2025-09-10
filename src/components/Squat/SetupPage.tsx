@@ -46,13 +46,6 @@ const SetupPage: React.FC<SetupPageProps> = ({
   return (
     <div 
       className="w-full bg-black text-white flex flex-col"
-      // style={{ 
-      //   maxWidth: '430px', 
-      //   margin: "0 auto",
-      //   minHeight: '100vh',
-      //   height: '100vh', // Tambahkan height eksplisit
-      //   overflow: 'hidden' // Cegah scrolling
-      // }}
     >
       {/* Video Container - Gunakan flex-1 dan remove margin bottom */}
       <div 
@@ -89,7 +82,7 @@ const SetupPage: React.FC<SetupPageProps> = ({
       <div 
         className="mx-4 flex-shrink-0"
         style={{ 
-          paddingTop: '16px',
+          paddingTop: '0px',
           paddingBottom: '16px',
           marginTop: 0,
           marginBottom: 0
