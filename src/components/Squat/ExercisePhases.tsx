@@ -40,10 +40,13 @@ export const HydratePhase: React.FC<ProgressPhaseProps> = ({
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 mb-4 bg-transparent overflow-hidden" style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
+      <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         marginBottom: '20px',
         borderRadius: '5px'
       }}>
@@ -111,10 +114,13 @@ export const RecoveryPhase: React.FC<ProgressPhaseProps> = ({
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 mb-4 bg-transparent overflow-hidden" style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
+      <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         marginBottom: '20px',
         borderRadius: '5px'
       }}>
@@ -178,10 +184,13 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
 }) => {
   return (
     <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 mb-4 bg-transparent overflow-hidden" style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
+      <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         marginBottom: '20px',
         borderRadius: '5px'
       }}>
@@ -201,33 +210,44 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
             objectFit: 'cover'
           }}
         />
-
         {/* Exercise counter overlay */}
         <div className="absolute inset-0 flex flex-col justify-end items-center pb-16">
           <div className="w-full px-4">
-            {/* Full width counter container - Changed to relative positioning */}
-            <div className="relative w-full rounded-lg p-4 h-[100px]">
+            {/* Full width counter container with DEBUG BORDER */}
+            <div 
+              className="relative w-full rounded-lg p-4 h-[100px]"
+            >
               
-              {/* ROUND text - positioned absolutely to left */}
-              <div className="absolute left-4 bottom-0 transform -rotate-90 origin-bottom-left" 
+              {/* ROUND text - positioned absolutely to left with DEBUG BORDER */}
+              <div 
+                className="absolute left-4 bottom-0 transform -rotate-90 origin-bottom-left" 
                 style={{ 
                   transformOrigin: 'left bottom',
-                  marginLeft: '40px'
-                }}>
-                <span className="text-white text-[40px] font-vancouver font-regular leading-none">
+                  marginLeft: '20px',
+                  width: '80px', /* Fixed width to contain the text */
+                  height: 'auto',
+                }}
+              >
+                <span className="text-white text-[35px] font-vancouver font-regular leading-none whitespace-nowrap">
                   ROUND {currentRound}
                 </span>
               </div>
               
-              {/* Count number - centered absolutely */}
-              <div className="absolute inset-0 flex items-center justify-center mt-4">
-                <span className="text-[#FF0000] text-[120px] font-vancouver font-regular leading-none">
+              {/* Count number - centered absolutely with DEBUG BORDER */}
+              <div 
+                className="absolute inset-0 flex items-center justify-center mt-4"
+              >
+                <span 
+                  className="text-[#FF0000] text-[120px] font-vancouver font-regular leading-none"
+                >
                   {squatCount}
                 </span>
               </div>
               
-              {/* REP text - positioned absolutely to right */}
-              <div className="absolute right-4 bottom-0 flex items-end -mt-4">
+              {/* REP text - positioned absolutely to right with DEBUG BORDER */}
+              <div 
+                className="absolute right-0 bottom-4 flex items-end"
+              >
                 <span className="text-[#FF0000] text-[50px] font-vancouver font-regular leading-none">
                   REP
                 </span>
@@ -240,17 +260,20 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
   );
 };
 
-export const GoPhase: React.FC<BasePhaseProps> = ({ 
+export const GoPhase: React.FC<BasePhaseProps & { progressPercent?: number }> = ({ 
   videoRef, 
-  canvasRef 
+  canvasRef,
+  progressPercent = 0 
 }) => {
   return (
     <div className="flex-1 flex flex-col">
-      <div className="relative mx-4 mb-4 bg-transparent overflow-hidden" style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
-        marginBottom: '20px',
+      <div className="relative mx-auto mb-4 bg-transparent overflow-hidden" style={{ 
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         borderRadius: '5px'
       }}>
         <video
@@ -270,9 +293,11 @@ export const GoPhase: React.FC<BasePhaseProps> = ({
           }}
         />
 
-        {/* GO overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-          <div className="text-[120px] sm:text-[150px] font-vancouver font-regular text-[#FF0000] animate-pulse">GO!</div>
+        {/* GO overlay - centered with balanced spacing */}
+        <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
+          <div className="flex flex-col items-center justify-center flex-1">
+            <div className="text-[150px] font-vancouver font-regular text-[#FF0000] animate-pulse mb-8">GO!</div>
+          </div>
         </div>
       </div>
     </div>

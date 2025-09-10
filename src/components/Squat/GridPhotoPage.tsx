@@ -101,19 +101,15 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     const photoHeight = gridHeight / 2;
     
     try {
-      // Load and draw logo
+      // Load and draw logo with fixed size
       try {
-        const logoImg = await loadImage('./assets/LOGO2 1.png');
+        const logoImg = await loadImage('./images/logo2.png');
         
-        const logoAspectRatio = logoImg.width / logoImg.height;
-        let logoDisplayWidth = canvas.width * 0.6;
-        let logoDisplayHeight = logoDisplayWidth / logoAspectRatio;
+        // Fixed logo dimensions to match the Image component (205x73)
+        const logoDisplayWidth = 205;
+        const logoDisplayHeight = 73;
         
-        if (logoDisplayHeight > logoHeight - 20) {
-          logoDisplayHeight = logoHeight - 20;
-          logoDisplayWidth = logoDisplayHeight * logoAspectRatio;
-        }
-        
+        // Center the logo horizontally
         const logoX = (canvas.width - logoDisplayWidth) / 2;
         const logoYPos = logoY + (logoHeight - logoDisplayHeight) / 2;
         
@@ -193,13 +189,13 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       
       // Draw stats section
       const statsStartY = gridStartY + gridHeight;
-      const statsHeight = canvas.height - statsStartY;
+      const statsHeight = 120
       
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, statsStartY, canvas.width, statsHeight);
       
       const statsCenterX = canvas.width / 2;
-      const statsCenterY = statsStartY + statsHeight / 2;
+      const statsCenterY = statsStartY + 60;
       
       // Draw squat count
       ctx.fillStyle = '#ff0000';
@@ -211,7 +207,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       // Draw "SQUATS" label
       ctx.save();
       ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 15px Arial';
+      ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'left';
       ctx.translate(statsCenterX - 60, statsCenterY + 2);
       ctx.rotate(-Math.PI / 2);
@@ -295,23 +291,14 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
   return (
     <div 
       className="w-full min-h-screen bg-black text-white flex flex-col" 
-      style={{ maxWidth: 430, margin: "0 auto" }}
+      style={{ 
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)', 
+        margin: "0 auto" 
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-center py-2 relative flex-shrink-0">
-        <img 
-          src="./assets/LOGO2 1.png" 
-          alt="Unlock Your 100 Logo" 
-          className="h-12 object-contain"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-          }}
-        />
-      </div>
-
       {/* Content */}
-      <div className="flex-1 mx-4 flex flex-col items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-start pt-2">
         <div className="w-full max-w-sm">
           <canvas 
             ref={canvasRef} 
@@ -337,7 +324,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
         <button
           onClick={handleShare}
           disabled={!gridImage}
-          className={`mt-6 w-full max-w-sm text-white py-3 px-8 rounded-md font-bold transition-colors flex items-center justify-center ${
+          className={`w-full max-w-sm text-white py-3 px-8 rounded-md transition-colors flex items-center justify-center ${
             gridImage 
               ? 'bg-[#FF0000] hover:bg-[#CC0000]' 
               : 'bg-gray-600 cursor-not-allowed'
@@ -346,24 +333,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
           <span className="text-white text-[24px] font-vancouver font-regular">
             SHARE TO COLLECT POINTS
           </span>
-        </button>
-
-        {/* Stats Summary */}
-        <div className="mt-4 text-center">
-          <p className="text-gray-400 text-sm">
-            Round 1: {round1Count} squats | Round 2: {round2Count} squats
-          </p>
-          <p className="text-white text-lg font-bold mt-1">
-            Total: {totalSquats} squats completed!
-          </p>
-        </div>
-
-        {/* Back Button */}
-        <button
-          onClick={onBack}
-          className="mt-4 text-gray-400 hover:text-white transition-colors"
-        >
-          Back to Home
         </button>
       </div>
     </div>

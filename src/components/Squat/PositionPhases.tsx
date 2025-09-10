@@ -27,9 +27,12 @@ export const PositionBeforeHydrate: React.FC<PositionComponentProps> = ({
     <div className="flex-1 flex flex-col">
       <div className="relative mx-4 bg-black overflow-hidden flex-1" 
       style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         marginBottom: 0,
         borderRadius: '5px',
       }}>
@@ -53,7 +56,7 @@ export const PositionBeforeHydrate: React.FC<PositionComponentProps> = ({
         >
           <div className="relative w-2/5 h-4/5"> 
             <img 
-              src="./assets/Union.png"
+              src="./images/Union.png"
               alt="Body Position Guide"
               className="w-full h-full object-contain transition-all duration-300"
               style={{ 
@@ -94,9 +97,12 @@ export const PositionBeforeRecovery: React.FC<PositionComponentProps> = ({
   return (
     <div className="flex-1 flex flex-col">
       <div className="relative mx-4 mb-4 bg-black overflow-hidden" style={{ 
-        // aspectRatio: '3/4',
-        // maxHeight: 'calc(100vh - 200px)',
-        // minHeight: '300px',
+        aspectRatio: '3/4',
+        width: '100%',
+        maxWidth: 'min(90vw, 60vh * 0.75)',
+        height: 'auto',
+        maxHeight: '60vh',
+        minHeight: '300px',
         marginBottom: 0,
         borderRadius: '5px', 
       }}>

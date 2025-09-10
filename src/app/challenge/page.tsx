@@ -12,6 +12,7 @@ import SquatChallengeApp from "@/components/SquatChallenge";
 export default function ChallengePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, stats, isLoading } = useAuthStore();
+  const [hideLogo, setHideLogo] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,19 +52,24 @@ export default function ChallengePage() {
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
 
-    <div className="flex items-end justify-center py-2 relative flex-shrink-0">
-      <Image
-        src="/images/logo2.png"
-        alt="UNLOCK YOUR 100"
-        width={205}
-        height={73}
-        priority
-      />
-    </div>  
+    {!hideLogo && (
+      <div className="flex items-end justify-center py-2 relative flex-shrink-0">
+        <Image
+          src="/images/logo2.png"
+          alt="UNLOCK YOUR 100"
+          width={205}
+          height={73}
+          priority
+        />
+      </div>
+    )}
 
     <div className="flex-1 overflow-y-auto overflow-x-hidden">
       <div className="min-h-full">
-        <SquatChallengeApp onBack={handleBackFromChallenge} />
+        <SquatChallengeApp 
+          onBack={handleBackFromChallenge} 
+          onHideLogo={setHideLogo} 
+        />
       </div>
     </div>
     

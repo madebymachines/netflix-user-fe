@@ -49,9 +49,11 @@ const SetupPage: React.FC<SetupPageProps> = ({
     >
       {/* Video Container - Gunakan flex-1 dan remove margin bottom */}
       <div 
-        className="relative mx-4 bg-transparent overflow-hidden rounded-lg"
+        className="relative mx-auto bg-transparent overflow-hidden rounded-lg"
         style={{ 
           aspectRatio: '3/4',
+          width: '100%',
+          maxWidth: 'min(90vw, 60vh * 0.75)',
           height: 'auto',
           maxHeight: '60vh',
           minHeight: '300px',
