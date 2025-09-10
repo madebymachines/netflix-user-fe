@@ -1,0 +1,572 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Image from "next/image";
+import {
+  PoseLandmarker,
+  FilesetResolver,
+  DrawingUtils,
+  PoseLandmarkerResult,
+} from "@mediapipe/tasks-vision";
+
+// Import utility classes
+import { FPSMonitor } from '../utils/FPSMonitor';
+import { PositionValidator } from '../utils/PositionValidator';
+import { SquatCounter } from '../utils/SquatCounter';
+import { playCountSound, playAnnouncement } from '../utils/AudioUtils';
+
+// Import components
+import SetupPage from '../components/Squat/SetupPage';
+import { PositionBeforeHydrate, PositionBeforeRecovery } from '../components/Squat/PositionPhases';
+import { HydratePhase, RecoveryPhase, ExercisePhase, GoPhase } from '../components/Squat/ExercisePhases';
+import { HydrateTimer, RecoveryTimer, ExerciseTimer } from '../components/Squat/TimerDisplay';
+import GridPhotoPage from '../components/Squat/GridPhotoPage';
+
+// Type definitions
+type Phase = 'setup' | 'position-before-hydrate' | 'position-before-recovery' | 
+             'hydrate' | 'recovery' | 'exercise' | 'go' | 'completed' | 'grid';
+
+type PhotoType = 'hydrate' | 'round1Squat' | 'recovery' | 'round2Squat';
+
+interface FPSData {
+  fps: number;
+  avgFps: number;
+  isLowPerformance: boolean;
+  frameCount: number;
+}
+
+interface PositionValidation {
+  isValid: boolean;
+  message: string;
+}
+
+interface SquatPhotoStatus {
+  round1: boolean;
+  round2: boolean;
+}
+
+interface Screenshots {
+  [key: string]: string;
+}
+
+interface SquatChallengeAppProps {
+  onBack: () => void;
+}
+
+const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack }) => {
+  const [phase, setPhase] = useState<Phase>('setup');
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [timeRemaining, setTimeRemaining] = useState<number>(10);
+  const [squatCount, setSquatCount] = useState<number>(0);
+  const [totalSquats, setTotalSquats] = useState<number>(0);
+  const [webcamRunning, setWebcamRunning] = useState<boolean>(false);
+  const [fpsData, setFpsData] = useState<FPSData>({ fps: 0, avgFps: 0, isLowPerformance: false, frameCount: 0 });
+  const [isFpsCompatible, setIsFpsCompatible] = useState<boolean>(true);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [screenshots, setScreenshots] = useState<Screenshots>({});
+  const [hasSquatPhoto, setHasSquatPhoto] = useState<SquatPhotoStatus>({ round1: false, round2: false });
+  const [hasSpokenHydrate, setHasSpokenHydrate] = useState<boolean>(false);
+  const [hasSpokenRecovery, setHasSpokenRecovery] = useState<boolean>(false);
+  const [hasSpokenCongratulations, setHasSpokenCongratulations] = useState<boolean>(false);
+  const [positionValidation, setPositionValidation] = useState<PositionValidation>({ isValid: false, message: "" });
+  const [isPositionConfirmed, setIsPositionConfirmed] = useState<boolean>(false);
+  const [bodyOutlineKey, setBodyOutlineKey] = useState<number>(0);
+
+  // YouTube video ID for shorts
+  const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g"; // Replace with your YouTube Shorts ID
+
+  // Refs
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const squatCounterRef = useRef<SquatCounter>(new SquatCounter());
+  const fpsMonitorRef = useRef<FPSMonitor>(new FPSMonitor());
+  const positionValidatorRef = useRef<PositionValidator>(new PositionValidator());
+  const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Screenshot function
+  const takeScreenshot = useCallback((photoType: PhotoType): void => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    
+    if (!canvas || !video) return;
+    
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    if (!tempCtx) return;
+    
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    
+    tempCtx.drawImage(video, 0, 0);
+    tempCtx.drawImage(canvas, 0, 0);
+    
+    const dataURL = tempCanvas.toDataURL('image/png');
+    
+    setScreenshots(prev => ({
+      ...prev,
+      [photoType]: dataURL
+    }));
+    
+    console.log(`Screenshot taken for: ${photoType}`);
+  }, []);
+
+  // Initialize MediaPipe
+  useEffect(() => {
+    const initializePoseLandmarker = async (): Promise<void> => {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+        );
+        
+        const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.3,
+          minPosePresenceConfidence: 0.3,
+          minTrackingConfidence: 0.3,
+        });
+        
+        poseLandmarkerRef.current = poseLandmarker;
+      } catch (error) {
+        console.error("Error initializing PoseLandmarker:", error);
+      }
+    };
+
+    initializePoseLandmarker();
+  }, []);
+
+  // Start webcam
+  const startWebcam = useCallback(async (): Promise<void> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { min: 320, ideal: 480, max: 640 },
+          height: { min: 240, ideal: 640, max: 480 },
+          facingMode: 'user',
+          frameRate: { ideal: 30, max: 30 }
+        } 
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          setWebcamRunning(true);
+          fpsMonitorRef.current.reset();
+        };
+      }
+    } catch (error) {
+      console.error('Error accessing webcam:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (webcamRunning && videoRef.current && !videoRef.current.srcObject) {
+      console.log('Video lost srcObject, restarting...');
+      setWebcamRunning(false);
+    }
+  }, [phase, webcamRunning]);
+
+  useEffect(() => {
+    startWebcam();
+  }, [startWebcam]);
+
+  useEffect(() => {
+    if (!webcamRunning) {
+      startWebcam();
+    }
+  }, [webcamRunning, startWebcam]);
+
+  // Pose detection with proper canvas sizing and positioning
+  const detectPose = useCallback(async (): Promise<void> => {
+    if (!videoRef.current || !webcamRunning || !poseLandmarkerRef.current) {
+      animationFrameRef.current = requestAnimationFrame(detectPose);
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!canvas || video.videoWidth === 0 || video.videoHeight === 0 || video.readyState !== 4) {
+      animationFrameRef.current = requestAnimationFrame(detectPose);
+      return;
+    }
+
+    if (phase === 'setup') {
+      const currentFpsData = fpsMonitorRef.current.update();
+      setFpsData(currentFpsData);
+
+      if (currentFpsData.frameCount > 60 && currentFpsData.isLowPerformance) {
+        setIsFpsCompatible(false);
+      }
+    }
+
+    // Proper canvas sizing to match video exactly
+    const videoRect = video.getBoundingClientRect();
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.style.width = `${videoRect.width}px`;
+    canvas.style.height = `${videoRect.height}px`;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    
+    const canvasCtx = canvas.getContext('2d');
+    if (!canvasCtx) {
+      animationFrameRef.current = requestAnimationFrame(detectPose);
+      return;
+    }
+    
+    try {
+      const startTimeMs = performance.now();
+      const results: PoseLandmarkerResult = await poseLandmarkerRef.current.detectForVideo(video, startTimeMs);
+
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (results.landmarks && results.landmarks.length > 0) {
+        const landmarks = results.landmarks[0];
+        
+        // Handle position validation phase
+        // if (phase === 'position-before-hydrate' || phase === 'position-before-recovery') {
+        //   const validation = positionValidatorRef.current.validatePosition(landmarks);
+        //   setPositionValidation(validation);
+          
+        //   if (validation.isValid && !isPositionConfirmed) {
+        //     setIsPositionConfirmed(true);
+        //     const delay = 3000
+        //     setTimeout(() => {
+        //       handlePhaseComplete(); 
+        //     }, delay);
+        //   }
+        // }
+        
+        if (phase === 'exercise') {
+          // Draw skeleton with proper scaling to video dimensions
+          const drawingUtils = new DrawingUtils(canvasCtx);
+          drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF', lineWidth: 2 });
+          drawingUtils.drawLandmarks(landmarks, { color: '#FFFFFF', radius: 4 });
+          
+          // Process squat counting
+          const result = squatCounterRef.current.processPose(landmarks);
+          
+          // Take screenshot when squat down is detected
+          if (result.isSquatDown && !hasSquatPhoto[`round${currentRound}` as keyof SquatPhotoStatus]) {
+            const photoType: PhotoType = currentRound === 1 ? 'round1Squat' : 'round2Squat';
+            takeScreenshot(photoType);
+            setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: true }));
+          }
+          
+          if (result.newCount) {
+            setSquatCount(result.count);
+            setTotalSquats(prev => prev + 1);
+            playCountSound(result.count);
+            sessionStorage.setItem(`squats_round_${currentRound}`, result.count.toString());
+          }
+        }
+      }
+
+      animationFrameRef.current = requestAnimationFrame(detectPose);
+    } catch (error) {
+      console.error('Error in pose detection:', error);
+      animationFrameRef.current = requestAnimationFrame(detectPose);
+    }
+  }, [webcamRunning, phase, currentRound, takeScreenshot, hasSquatPhoto, isPositionConfirmed]);
+
+  useEffect(() => {
+    if (webcamRunning) {
+      detectPose();
+    }
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [webcamRunning, detectPose]);
+
+  useEffect(() => {
+    if (phase === 'position-before-hydrate' || phase === 'position-before-recovery') {
+      setIsPositionConfirmed(false);
+      positionValidatorRef.current.reset();
+      setBodyOutlineKey(prev => prev + 1);
+    }
+  }, [phase]);
+
+  // Timer logic with screenshot taking and audio announcements
+  useEffect(() => {
+    if (phase === 'hydrate' || phase === 'exercise' || phase === 'recovery') {
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if ((phase === 'hydrate' || phase === 'recovery') && prev === 5) {
+            const message = phase === 'hydrate' ? 'Your First Round Begin in' : 'Your Second Round Begin in';
+            playAnnouncement(message);
+          }
+          
+          if (prev <= 1) {
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+            }
+            handlePhaseComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
+    }
+  }, [phase]);
+
+  // Audio announcements at start of hydrate and recovery phases
+  useEffect(() => {
+    if (phase === 'hydrate' && timeRemaining === 10 && !hasSpokenHydrate) {
+      playAnnouncement('Hydrate and Energize your body');
+      setHasSpokenHydrate(true);
+    }
+  }, [phase, timeRemaining, hasSpokenHydrate]);
+
+  useEffect(() => {
+    if (phase === 'recovery' && timeRemaining === 10 && !hasSpokenRecovery) {
+      playAnnouncement('Time to Recover and Repeat Stronger your body');
+      setHasSpokenRecovery(true);
+    }
+  }, [phase, timeRemaining, hasSpokenRecovery]);
+
+  useEffect(() => {
+    if (phase === 'go') {
+      playAnnouncement('GO!');
+    }
+  }, [phase]);
+
+  // Progress bar calculation
+  useEffect(() => {
+    let totalTime: number;
+    if (phase === 'hydrate' || phase === 'recovery') totalTime = 10;
+    else if (phase === 'exercise') totalTime = 50;
+    else return;
+
+    const progress = ((totalTime - timeRemaining) / totalTime) * 100;
+    setProgressPercent(Math.min(100, Math.max(0, progress)));
+  }, [timeRemaining, phase]);
+
+  const handlePhaseComplete = (): void => {
+    if (phase === 'setup') {
+      // Langsung ke hydrate, skip position-before-hydrate
+      setPhase('hydrate');
+      setTimeRemaining(10);
+      setProgressPercent(0);
+    } else if (phase === 'hydrate') {
+      takeScreenshot('hydrate');
+      setProgressPercent(100);
+      setTimeout(() => {
+        setPhase('go');
+        setTimeout(() => {
+          setPhase('exercise');
+          setTimeRemaining(50);
+          setProgressPercent(0);
+          squatCounterRef.current.resetCount();
+          setSquatCount(0);
+          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+        }, 2000);
+      }, 1000);
+    } else if (phase === 'exercise') {
+      setProgressPercent(100);
+      if (currentRound === 1) {
+        // Langsung ke recovery, skip position validation
+        setPhase('recovery');
+        setTimeRemaining(10);
+        setProgressPercent(0);
+      } else {
+        if (!hasSpokenCongratulations) {
+          playAnnouncement('Congratulations! You finished your challenge!');
+          setHasSpokenCongratulations(true);
+        }
+        setTimeout(() => {
+          setPhase('grid');
+        }, 3000);
+      }
+    } else if (phase === 'recovery') {
+      takeScreenshot('recovery');
+      setProgressPercent(100);
+      setTimeout(() => {
+        // Langsung ke GO untuk round 2, skip position-before-recovery
+        setPhase('go');
+        setCurrentRound(2);
+        setTimeout(() => {
+          setPhase('exercise');
+          setTimeRemaining(50);
+          setProgressPercent(0);
+          squatCounterRef.current.resetCount();
+          setSquatCount(0);
+          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+        }, 2000);
+      }, 1000);
+    }
+  };
+
+  const handleContinue = (): void => {
+    if (isFpsCompatible) {
+      // setPhase('position-before-hydrate'); 
+      setPhase('hydrate');
+      if (videoRef.current) {
+        videoRef.current.play().catch(e => console.log('Video play error:', e));
+      }
+    }
+  };
+
+  // Show grid page
+  if (phase === 'grid') {
+    const round1Count = parseInt(sessionStorage.getItem('squats_round_1') || '0');
+    const round2Count = parseInt(sessionStorage.getItem('squats_round_2') || '0');
+    const photosArray: (string | undefined)[] = [
+      screenshots.hydrate,
+      screenshots.round1Squat,
+      screenshots.recovery,
+      screenshots.round2Squat
+    ];
+    
+    return (
+      <GridPhotoPage
+        photos={photosArray}
+        totalSquats={totalSquats}
+        round1Count={round1Count}
+        round2Count={round2Count}
+        onBack={onBack}
+        onShare={() => {}}
+      />
+    );
+  }
+
+  return (
+    <div 
+      className="w-full bg-black text-white flex flex-col" 
+      // style={{ 
+      //   maxWidth: '430px', 
+      //   margin: "0 auto",
+      //   minHeight: '100vh',
+      //   height: '100vh', // Tambahkan height eksplisit untuk konsistensi Safari
+      //   overflow: 'hidden' // Cegah scrolling yang tidak diinginkan
+      // }}
+    >
+      {phase === 'setup' && (
+        <SetupPage
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+          webcamRunning={webcamRunning}
+          isFpsCompatible={isFpsCompatible}
+          onBack={onBack}
+          onContinue={handleContinue}
+          YOUTUBE_VIDEO_ID={YOUTUBE_VIDEO_ID}
+        />
+      )}
+
+      {phase === 'position-before-hydrate' && (
+        <div className="flex-1 flex flex-col">
+          <PositionBeforeHydrate
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            positionValidation={positionValidation}
+            bodyOutlineKey={bodyOutlineKey}
+            phase={phase}
+          />
+        </div>
+      )}
+
+      {phase === 'position-before-recovery' && (
+        <div className="flex-1 flex flex-col">
+          <PositionBeforeRecovery
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            positionValidation={positionValidation}
+            bodyOutlineKey={bodyOutlineKey}
+            phase={phase}
+          />
+        </div>
+      )}
+
+      {phase === 'hydrate' && (
+        <>
+          <HydratePhase
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            progressPercent={progressPercent}
+          />
+          
+          {/* Progress Bar */}
+          <div className="mx-4 flex-shrink-0">
+            <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-[#FF0000] transition-all duration-1000 ease-linear"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <HydrateTimer timeRemaining={timeRemaining} />
+        </>
+      )}
+
+      {phase === 'recovery' && (
+        <>
+          <RecoveryPhase
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            progressPercent={progressPercent}
+          />
+          
+          {/* Progress Bar */}
+          <div className="mx-4 flex-shrink-0">
+            <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-[#FF0000] transition-all duration-1000 ease-linear"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <RecoveryTimer timeRemaining={timeRemaining} />
+        </>
+      )}
+
+      {phase === 'exercise' && (
+        <>
+          <ExercisePhase
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            currentRound={currentRound}
+            squatCount={squatCount}
+          />
+          
+          {/* Progress Bar */}
+          <div className="mx-4 flex-shrink-0">
+            <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-[#FF0000] transition-all duration-1000 ease-linear"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <ExerciseTimer timeRemaining={timeRemaining} />
+        </>
+      )}
+
+      {phase === 'go' && (
+        <GoPhase
+          videoRef={videoRef}
+          canvasRef={canvasRef}
+        />
+      )}
+    </div>
+  );
+};
+
+export default SquatChallengeApp;

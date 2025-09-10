@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { urw, gravtrac } from "./fonts";
+// import { urw, gravtrac, vancouver, vancouverGothic } from "./fonts";
 import DesktopGate from "@/components/DesktopGate";
 
 export const dynamic = "force-dynamic";
@@ -18,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${urw.variable} ${gravtrac.variable} bg-black antialiased`}
+        // className={`${urw.variable} ${gravtrac.variable} ${vancouver.variable} ${vancouverGothic.variable} bg-black antialiased`}
+        className='bg-black antialiased'
       >
-        <DesktopGate>{children}</DesktopGate>
+        {children}
+        {/* <DesktopGate>{children}</DesktopGate> */}
       </body>
     </html>
   );

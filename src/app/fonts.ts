@@ -44,3 +44,28 @@ export const urw = localFont({
   ],
   display: "swap",
 });
+
+
+export const vancouver = localFont({
+  variable: "--font-vancouver",
+  src: [
+    {
+      path: "./fonts/Vancouver-2.0.ttf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  display: "swap",
+});
+
+export const vancouverGothic = localFont({
+  variable: "--font-vancouver-gothic",
+  src: [
+    {
+      path: "./fonts/Vancouver-Gothic.ttf",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  display: "swap",
+});
