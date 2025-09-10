@@ -23,7 +23,6 @@ const codeToLabel = (code?: string | null) =>
   "";
 
 type TimespanUI = "All Time" | "Weekly" | "Top Streak";
-
 const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "weekly" | "streak"> = {
   "All Time": "alltime",
   Weekly: "weekly",
@@ -47,48 +46,73 @@ type LeaderboardResponse = {
   leaderboard: Row[];
 };
 
-function HexAvatar({
-  size = 64,
+function HexFrameAvatar({
+  size = 88,
   src,
-  badge,
+  rankBadge,
+  className = "",
 }: {
   size?: number;
   src?: string | null;
-  badge?: string | number;
+  rankBadge?: 1 | 2 | 3;
+  className?: string;
 }) {
-  const outer: React.CSSProperties = {
-    width: size,
-    height: size,
-    clipPath: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
-    background: "linear-gradient(180deg,#bdbdbd,#6b6b6b 50%,#d1d1d1)",
-    padding: Math.max(4, Math.round(size * 0.06)),
-  };
-  const imgSrc = src || "/images/bottle.png";
+  // clip-path hex “tegak” (point di atas & bawah)
+  const HEX = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
+  // Sedikit inset agar foto tidak “nabrak” inner edge frame
+  const inset = Math.round(size * 0.16);
+
   return (
-    <div className="relative inline-block" style={outer}>
+    <div
+      className={`relative inline-block ${className}`}
+      style={{ width: size, height: size }}
+    >
+      {/* Foto — di-clip hex pointy-top */}
       <div
-        className="w-full h-full overflow-hidden"
+        className="absolute inset-0"
         style={{
-          clipPath: "polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)",
-          background:
-            "radial-gradient(120% 120% at 50% 10%,#3d3d3d,#171717 70%)",
-          border: "2px solid #ff2a2a",
-          boxShadow:
-            "0 0 10px rgba(255,42,42,.5), inset 0 0 18px rgba(255,42,42,.3)",
+          clipPath: HEX,
+          padding: inset, // space untuk inner aperture frame
+          boxSizing: "border-box",
         }}
       >
-        <Image
-          src={imgSrc}
-          alt="avatar"
-          width={size}
-          height={size}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        <div
+          className="w-full h-full relative overflow-hidden"
+          style={{ clipPath: HEX }}
+        >
+          <Image
+            src={src || "/images/bottle.png"}
+            alt="avatar"
+            fill
+            sizes={`${size}px`}
+            style={{ objectFit: "cover" }}
+            priority={false}
+          />
+        </div>
       </div>
-      {badge != null && (
-        <span className="absolute -top-2 -right-2 grid place-items-center h-5 w-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-          {badge}
-        </span>
+
+      {/* Frame PNG di atas */}
+      <Image
+        src="/images/f_legendary.png"
+        alt="frame"
+        fill
+        sizes={`${size}px`}
+        style={{ objectFit: "contain", pointerEvents: "none" }}
+        priority={false}
+      />
+
+      {/* Rank badge kiri-bawah */}
+      {rankBadge && (
+        <div className="absolute -bottom-2 -left-2">
+          <Image
+            src={`/images/${rankBadge}.png`}
+            alt={`rank-${rankBadge}`}
+            width={28}
+            height={28}
+            style={{ objectFit: "contain" }}
+            priority={false}
+          />
+        </div>
       )}
     </div>
   );
@@ -252,7 +276,7 @@ export default function LeaderboardPage() {
           <Image src="/images/logo2.png" alt="unlock" width={205} height={73} />
         </div>
 
-        <h1 className="mt-1 mb-2 text-center font-heading text-[18px] tracking-widest">
+        <h1 className="mt-4 text-center font-semibold text-red-500 text-[20px] tracking-widest">
           LEADERBOARD
         </h1>
 
@@ -288,21 +312,24 @@ export default function LeaderboardPage() {
 
         <div className="w-[320px] mx-auto mt-3 p-3 rounded-xl bg-black/30 border border-white/10">
           {/* Podium */}
-          <div className="flex items-end justify-center gap-5">
+          <div className="flex items-end justify-center gap-6">
             {[podium[1], podium[0], podium[2]].map((p, idx) => {
-              const size = idx === 1 ? 70 : 62;
-              const rank = idx === 1 ? 1 : idx === 0 ? 2 : 3;
+              const size = idx === 1 ? 92 : 82; // tengah lebih besar
+              const rank = (idx === 1 ? 1 : idx === 0 ? 2 : 3) as 1 | 2 | 3;
+
+              // Geser vertikal: juara 1 naik, juara 2 & 3 turun
+              const shiftY = idx === 1 ? -12 : 20;
+
               return (
                 <div
                   key={rank}
-                  className={`grid justify-items-center gap-1 ${
-                    idx === 1 ? "-mt-3" : ""
-                  }`}
+                  className="grid justify-items-center gap-1"
+                  style={{ transform: `translateY(${shiftY}px)` }}
                 >
-                  <HexAvatar
+                  <HexFrameAvatar
                     size={size}
-                    badge={rank}
                     src={p?.profilePictureUrl || null}
+                    rankBadge={rank}
                   />
                   <div
                     className={`text-[10px] ${
@@ -320,7 +347,7 @@ export default function LeaderboardPage() {
           </div>
 
           {/* Table */}
-          <div className="mt-3 rounded-md overflow-hidden border border-white/10">
+          <div className="mt-6 rounded-md overflow-hidden border border-white/10">
             <div className="grid grid-cols-[40px_1fr_70px] bg-black/60 text-[10px] uppercase tracking-widest px-2 py-2">
               <div>Rank</div>
               <div>User</div>
