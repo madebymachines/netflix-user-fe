@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
@@ -10,6 +10,7 @@ import OverlayMenu from "@/components/OverlayMenu";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axios";
 import { isAxiosError } from "axios";
+import * as htmlToImage from "html-to-image";
 
 const COUNTRIES = [
   { code: "MY", label: "Malaysia" },
@@ -57,9 +58,7 @@ function HexFrameAvatar({
   rankBadge?: 1 | 2 | 3;
   className?: string;
 }) {
-  // clip-path hex “tegak” (point di atas & bawah)
   const HEX = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
-  // Sedikit inset agar foto tidak “nabrak” inner edge frame
   const inset = Math.round(size * 0.16);
 
   return (
@@ -67,14 +66,10 @@ function HexFrameAvatar({
       className={`relative inline-block ${className}`}
       style={{ width: size, height: size }}
     >
-      {/* Foto — di-clip hex pointy-top */}
+      {/* Foto */}
       <div
         className="absolute inset-0"
-        style={{
-          clipPath: HEX,
-          padding: inset, // space untuk inner aperture frame
-          boxSizing: "border-box",
-        }}
+        style={{ clipPath: HEX, padding: inset, boxSizing: "border-box" }}
       >
         <div
           className="w-full h-full relative overflow-hidden"
@@ -90,8 +85,7 @@ function HexFrameAvatar({
           />
         </div>
       </div>
-
-      {/* Frame PNG di atas */}
+      {/* Frame */}
       <Image
         src="/images/f_legendary.png"
         alt="frame"
@@ -100,8 +94,7 @@ function HexFrameAvatar({
         style={{ objectFit: "contain", pointerEvents: "none" }}
         priority={false}
       />
-
-      {/* Rank badge kiri-bawah */}
+      {/* Badge rank */}
       {rankBadge && (
         <div className="absolute -bottom-2 -left-2">
           <Image
@@ -254,10 +247,58 @@ export default function LeaderboardPage() {
 
   const shareRegionLabel = regionIsGlobal ? "Global" : homeRegionLabel;
 
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  const handleShare = async () => {
+    const node = shareRef.current;
+    if (!node) return;
+
+    try {
+      const dataUrl = await htmlToImage.toPng(node, {
+        pixelRatio: 3,
+        backgroundColor: "#000000",
+        skipFonts: false,
+        cacheBust: true,
+      });
+
+      // Konversi ke Blob + File
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File(
+        [blob],
+        `leaderboard-${shareRegionLabel}-${period}.png`,
+        { type: "image/png" }
+      );
+
+      // Web Share API (Android/Chrome → bisa ke Instagram/TikTok dari share sheet)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: "Leaderboard",
+          text: `Physical Asia – ${shareRegionLabel} • ${period}`,
+          files: [file],
+        });
+        return;
+      }
+
+      // Fallback: download PNG
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      alert("Gambar sudah diunduh. Upload manual ke Instagram/TikTok ya 👍");
+    } catch (e) {
+      console.error(e);
+      alert("Gagal membuat gambar untuk dibagikan.");
+    }
+  };
+
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
+      {/* BG */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -271,7 +312,8 @@ export default function LeaderboardPage() {
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      <div className="relative z-10 w-full text-white px-4 pb-6">
+      {/* ====== AREA YANG DICAPTURE (wrap SEMUA konten share ke dalam div referensi) ====== */}
+      <div ref={shareRef} className="relative z-10 w-full text-white px-4 pb-6">
         <div className="w-full flex justify-center pt-2">
           <Image src="/images/logo2.png" alt="unlock" width={205} height={73} />
         </div>
@@ -314,12 +356,9 @@ export default function LeaderboardPage() {
           {/* Podium */}
           <div className="flex items-end justify-center gap-6">
             {[podium[1], podium[0], podium[2]].map((p, idx) => {
-              const size = idx === 1 ? 92 : 82; // tengah lebih besar
+              const size = idx === 1 ? 92 : 82;
               const rank = (idx === 1 ? 1 : idx === 0 ? 2 : 3) as 1 | 2 | 3;
-
-              // Geser vertikal: juara 1 naik, juara 2 & 3 turun
               const shiftY = idx === 1 ? -12 : 20;
-
               return (
                 <div
                   key={rank}
@@ -377,15 +416,17 @@ export default function LeaderboardPage() {
             </div>
           </div>
         </div>
+      </div>
+      {/* ====== /AREA YANG DICAPTURE ====== */}
 
-        <div className="w-[320px] mx-auto mt-3">
-          <button
-            className="w-full h-[40px] rounded-md font-heading tracking-wider bg-white text-black"
-            onClick={() => alert(`Share ${shareRegionLabel} • ${period}`)}
-          >
-            SHARE TO SOCIAL MEDIA
-          </button>
-        </div>
+      {/* Tombol Share */}
+      <div className="relative z-10 w-[320px] mx-auto -mt-2 mb-6">
+        <button
+          className="w-full h-[40px] rounded-md font-heading tracking-wider bg-white text-black"
+          onClick={handleShare}
+        >
+          SHARE TO SOCIAL MEDIA
+        </button>
       </div>
 
       <OverlayMenu
