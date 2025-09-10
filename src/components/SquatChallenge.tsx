@@ -261,7 +261,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
         }, 2000);
-      }, 3000);
+      }, 2000);
     }
   }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations]);
 

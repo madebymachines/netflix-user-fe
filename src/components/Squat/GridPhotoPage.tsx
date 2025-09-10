@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { prepareActivitySubmission } from '@/utils/ActivityUtils';
 
 // Define interfaces for props
 interface GridPhotoPageProps {
@@ -26,10 +28,43 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gridImage, setGridImage] = useState<string | null>(null);
+  const [isSubmissionComplete, setIsSubmissionComplete] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  
+  // Get auth store functions
+  const { submitActivity, isSubmittingActivity, stats } = useAuthStore();
 
   useEffect(() => {
     generateGridImage();
   }, [photos]);
+
+  // Auto-submit activity when grid image is generated
+  useEffect(() => {
+    if (gridImage && !isSubmissionComplete && !submissionError) {
+      handleAutoSubmitActivity();
+    }
+  }, [gridImage]);
+
+  const handleAutoSubmitActivity = async (): Promise<void> => {
+    if (!gridImage) return;
+
+    try {
+      const activityData = await prepareActivitySubmission(
+        gridImage,
+        round1Count,
+        round2Count,
+        'INDIVIDUAL'
+      );
+
+      await submitActivity(activityData);
+      setIsSubmissionComplete(true);
+      
+      console.log('Activity submitted successfully');
+    } catch (error) {
+      console.error('Failed to submit activity:', error);
+      setSubmissionError('Failed to submit challenge results. You can still share your results.');
+    }
+  };
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
@@ -163,7 +198,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             if (i === 0) {
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
-              const bannerHeight = 25;
+              const bannerHeight = 28;
               const bannerY = y + photoHeight * 0.55;
               
               // Progress percentage (you can make this dynamic based on your app state)
@@ -184,9 +219,10 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               
               // Draw text
               ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 16px "URW Geometric"';
+              ctx.font = 'bold 12px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.fillText('HYDRATE AND ENERGIZE', x + photoWidth/2, bannerY + 20);
+              ctx.textBaseline = 'middle';
+              ctx.fillText('HYDRATE AND ENERGIZE', x + photoWidth/2, bannerY + bannerHeight/2);
               
               // Draw bottle icon at the end of progress bar
               try {
@@ -202,18 +238,12 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
                 ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
               } catch (bottleError) {
                 console.error('Error loading bottle image:', bottleError);
-                // Fallback: draw a simple circle as bottle placeholder
-                ctx.fillStyle = '#FFFFFF';
-                ctx.beginPath();
-                // FIXED: Position fallback circle at progress end
-                ctx.arc(bannerX + progressWidth, bannerY + bannerHeight/2, 8, 0, 2 * Math.PI);
-                ctx.fill();
               }
               
               // Black subtitle banner (unchanged)
               const gap = 5;
               const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 18;
+              const blackBannerHeight = 20;
               const blackBannerWidth = photoWidth * 0.75;
               const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
               
@@ -223,9 +253,10 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.fill();
               
               ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 12px "URW Geometric"';
+              ctx.font = 'bold 10px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.fillText('BEFORE UNLOCK YOUR 100', x + photoWidth/2, blackBannerY + 15);
+              ctx.textBaseline = 'middle'; // Add this for vertical centering
+              ctx.fillText('BEFORE UNLOCK YOUR 100', x + photoWidth/2, blackBannerY + blackBannerHeight/2);
             }
             else if (i === 1) {
               const counterAreaY = y + photoHeight * 0.55;
@@ -278,9 +309,10 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               
               // Draw text
               ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 16px "URW Geometric"';
+              ctx.font = 'bold 12px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.fillText('RECOVER & REPEAT STRONGER', x + photoWidth/2, bannerY + 20);
+              ctx.textBaseline = 'middle'; 
+              ctx.fillText('RECOVER & REPEAT STRONGER', x + photoWidth/2, bannerY + bannerHeight/2);
               
               // Draw bottle icon at the END of the progress bar (not banner width)
               try {
@@ -295,21 +327,15 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
                 ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
               } catch (bottleError) {
                 console.error('Error loading bottle image:', bottleError);
-                // Fallback: draw a simple circle as bottle placeholder
-                ctx.fillStyle = '#FFFFFF';
-                ctx.beginPath();
-                // FIXED: Position fallback circle at progress end too
-                ctx.arc(bannerX + progressWidth, bannerY - 10, 10, 0, 2 * Math.PI);
-                ctx.fill();
               }
               
               // Black subtitle banner - adjust width to fit text
               const gap = 5;
               const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 18;
+              const blackBannerHeight = 20;
               
               // Measure text width and add padding
-              ctx.font = 'bold 12px "URW Geometric"';
+              ctx.font = 'bold 10px "URW Geometric"';
               const textMetrics = ctx.measureText("IT'S TIME TO");
               const blackBannerWidth = textMetrics.width + 20; // Add 20px padding
               const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
@@ -321,7 +347,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               
               ctx.fillStyle = '#FFFFFF';
               ctx.textAlign = 'center';
-              ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + 15);
+              ctx.textBaseline = 'middle';
+              ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + blackBannerHeight/2);
             }
             else if (i === 3) {
               const counterAreaY = y + photoHeight * 0.55;
@@ -483,13 +510,26 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             <img 
               src={gridImage} 
               alt="Squat Challenge Grid" 
-              className="max-w-full h-auto rounded-lg shadow-lg mb-4" // Added mb-4 for bottom margin
+              className="max-w-full h-auto rounded-lg shadow-lg mb-4" 
             />
           )}
-          
-          {!gridImage && (
-            <div className="w-full h-96 bg-gray-800 rounded-lg flex items-center justify-center mb-4">
-              <p className="text-gray-400">Generating challenge summary...</p>
+
+          {/* Submission Status */}
+          {isSubmittingActivity && (
+            <div className="w-full max-w-sm mb-2 p-2 bg-yellow-900 text-yellow-200 text-center rounded-md text-sm">
+              Submitting your challenge results...
+            </div>
+          )}
+
+          {isSubmissionComplete && (
+            <div className="w-full max-w-sm mb-2 p-2 bg-green-900 text-green-200 text-center rounded-md text-sm">
+              ✓ Challenge submitted! You've earned points!
+            </div>
+          )}
+
+          {submissionError && (
+            <div className="w-full max-w-sm mb-2 p-2 bg-red-900 text-red-200 text-center rounded-md text-sm">
+              ⚠ {submissionError}
             </div>
           )}
         </div>

@@ -88,7 +88,7 @@ export const HydratePhase: React.FC<ProgressPhaseProps> = ({
             </div>
 
             <div className="relative bg-black text-white rounded-[10px] mb-2 overflow-hidden flex items-center justify-center" 
-                style={{ width: '240px', height: '45px' }}>
+                style={{ width: '240px', height: '38px' }}>
               <div 
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
@@ -162,7 +162,7 @@ export const RecoveryPhase: React.FC<ProgressPhaseProps> = ({
             </div>
 
             <div className="relative bg-black text-white rounded-[10px] mb-2 overflow-hidden flex items-center justify-center" 
-              style={{ width: '240px', height: '45px' }}>
+              style={{ width: '240px', height: '38px' }}>
               <div 
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
