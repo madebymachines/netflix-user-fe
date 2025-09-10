@@ -25,7 +25,7 @@ export const PositionBeforeHydrate: React.FC<PositionComponentProps> = ({
 }) => {
   return (
     <div className="flex flex-col">
-      <div className="relative mx-auto bg-black overflow-hidden flex-1" 
+      <div className="relative mx-auto bg-black overflow-hidden" 
       style={{ 
         aspectRatio: '3/4',
         width: '100%',
