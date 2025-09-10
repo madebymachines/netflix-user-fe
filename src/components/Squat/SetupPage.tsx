@@ -82,13 +82,13 @@ const SetupPage: React.FC<SetupPageProps> = ({
       <div 
         className="mx-4 flex-shrink-0"
         style={{ 
-          paddingTop: '0px',
-          paddingBottom: '16px',
+          paddingTop: '5px',
+          paddingBottom: '5px',
           marginTop: 0,
           marginBottom: 0
         }}
       >
-        <div className="flex items-center justify-center gap-8">
+        <div className="flex items-center justify-center">
           <div className="flex items-center gap-2">
             <div className={`w-5 h-5 rounded-full border-2 mb-2 flex items-center justify-center ${webcamRunning ? 'border-[#00FF51]' : 'border-[#FFFFFF]'}`}>
               {webcamRunning ? <Check size={12} className="text-[#00FF51]" /> : <X size={12} className="text-[#FFFFFF]" />}
