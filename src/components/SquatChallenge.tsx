@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Image from "next/image";
 import {
   PoseLandmarker,
   FilesetResolver,
@@ -11,7 +10,7 @@ import {
 import { FPSMonitor } from '../utils/FPSMonitor';
 import { PositionValidator } from '../utils/PositionValidator';
 import { SquatCounter } from '../utils/SquatCounter';
-import { playCountSound, playAnnouncement } from '../utils/AudioUtils';
+import { playCountSound, playAnnouncement, stopAllAudio } from '../utils/AudioUtils';
 
 // Import components
 import SetupPage from '../components/Squat/SetupPage';
@@ -70,7 +69,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const [positionValidation, setPositionValidation] = useState<PositionValidation>({ isValid: false, message: "" });
   const [isPositionConfirmed, setIsPositionConfirmed] = useState<boolean>(false);
   const [bodyOutlineKey, setBodyOutlineKey] = useState<number>(0);
-
   // YouTube video ID for shorts
   const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g"; // Replace with your YouTube Shorts ID
 
@@ -188,6 +186,85 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     }
   }, [webcamRunning, startWebcam]);
 
+  const handlePhaseComplete = useCallback((): void => {
+    console.log(`Phase completing: ${phase}`);
+    
+    if (phase === 'position-before-hydrate') {
+      console.log('Transitioning from position-before-hydrate to hydrate');
+      setPhase('hydrate');
+      setTimeRemaining(10);
+      setProgressPercent(0);
+      
+    } else if (phase === 'hydrate') {
+      console.log('Transitioning from hydrate to go phase');
+      takeScreenshot('hydrate');
+      setProgressPercent(100);
+      
+      setTimeout(() => {
+        console.log('Setting phase to GO');
+        setPhase('go');
+        
+        setTimeout(() => {
+          console.log('Setting phase to exercise');
+          setPhase('exercise');
+          setTimeRemaining(50);
+          setProgressPercent(0);
+          squatCounterRef.current.resetCount();
+          setSquatCount(0);
+          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+        }, 2000);
+      }, 1000);
+      
+    } else if (phase === 'exercise') {
+      console.log(`Exercise phase complete for round ${currentRound}`);
+      setProgressPercent(100);
+      
+      if (currentRound === 1) {
+        console.log('Transitioning to recovery phase');
+        setPhase('recovery');
+        setTimeRemaining(10);
+        setProgressPercent(0);
+      } else {
+        console.log('Challenge completed, transitioning to grid');
+        if (!hasSpokenCongratulations) {
+          playAnnouncement('Congratulations! You finished your challenge!');
+          setHasSpokenCongratulations(true);
+        }
+        setTimeout(() => {
+          setPhase('grid');
+        }, 3000);
+      }
+      
+    } else if (phase === 'recovery') {
+      console.log('Recovery phase complete, transitioning to position-before-recovery');
+      takeScreenshot('recovery');
+      setProgressPercent(100);
+      
+      setTimeout(() => {
+        setPhase('position-before-recovery');
+        setProgressPercent(0);
+        positionValidatorRef.current.reset();
+        setIsPositionConfirmed(false);
+      }, 1000);
+      
+    } else if (phase === 'position-before-recovery') {
+      console.log('Position before recovery complete, starting round 2');
+      setTimeout(() => {
+        setPhase('go');
+        setCurrentRound(2);
+        
+        setTimeout(() => {
+          setPhase('exercise');
+          setTimeRemaining(50);
+          setProgressPercent(0);
+          squatCounterRef.current.resetCount();
+          setSquatCount(0);
+          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+        }, 2000);
+      }, 3000);
+    }
+  }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations]);
+
   // Pose detection with proper canvas sizing and positioning
   const detectPose = useCallback(async (): Promise<void> => {
     if (!videoRef.current || !webcamRunning || !poseLandmarkerRef.current) {
@@ -203,16 +280,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       return;
     }
 
-    if (phase === 'setup') {
-      const currentFpsData = fpsMonitorRef.current.update();
-      setFpsData(currentFpsData);
-
-      if (currentFpsData.frameCount > 60 && currentFpsData.isLowPerformance) {
-        setIsFpsCompatible(false);
-      }
-    }
-
-    // Proper canvas sizing to match video exactly
+    // Proper canvas sizing
     const videoRect = video.getBoundingClientRect();
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -230,29 +298,34 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     
     try {
       const startTimeMs = performance.now();
-      const results: PoseLandmarkerResult = await poseLandmarkerRef.current.detectForVideo(video, startTimeMs);
+      const results = await poseLandmarkerRef.current.detectForVideo(video, startTimeMs);
 
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (results.landmarks && results.landmarks.length > 0) {
         const landmarks = results.landmarks[0];
         
-        // Handle position validation phase
+        // Handle position validation phase - simplified
         if (phase === 'position-before-hydrate' || phase === 'position-before-recovery') {
           const validation = positionValidatorRef.current.validatePosition(landmarks);
           setPositionValidation(validation);
           
+          // Simplified position confirmation
           if (validation.isValid && !isPositionConfirmed) {
+            console.log('Position confirmed, starting transition...');
             setIsPositionConfirmed(true);
-            const delay = 3000
+            
+            // Trigger phase completion after delay
             setTimeout(() => {
+              console.log('Triggering handlePhaseComplete from position validation');
               handlePhaseComplete(); 
-            }, delay);
+            }, 3000);
           }
         }
         
+        // Handle exercise phase
         if (phase === 'exercise') {
-          // Draw skeleton with proper scaling to video dimensions
+          // Draw skeleton
           const drawingUtils = new DrawingUtils(canvasCtx);
           drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF', lineWidth: 2 });
           drawingUtils.drawLandmarks(landmarks, { color: '#FFFFFF', radius: 4 });
@@ -260,7 +333,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           // Process squat counting
           const result = squatCounterRef.current.processPose(landmarks);
           
-          // Take screenshot when squat down is detected
           if (result.isSquatDown && !hasSquatPhoto[`round${currentRound}` as keyof SquatPhotoStatus]) {
             const photoType: PhotoType = currentRound === 1 ? 'round1Squat' : 'round2Squat';
             takeScreenshot(photoType);
@@ -281,7 +353,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       console.error('Error in pose detection:', error);
       animationFrameRef.current = requestAnimationFrame(detectPose);
     }
-  }, [webcamRunning, phase, currentRound, takeScreenshot, hasSquatPhoto, isPositionConfirmed]);
+  }, [webcamRunning, phase, currentRound, takeScreenshot, hasSquatPhoto, isPositionConfirmed, handlePhaseComplete]);
 
   useEffect(() => {
     if (webcamRunning) {
@@ -297,55 +369,34 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
 
   useEffect(() => {
     if (phase === 'position-before-hydrate' || phase === 'position-before-recovery') {
+      console.log(`Entering position validation phase: ${phase}`);
       setIsPositionConfirmed(false);
       positionValidatorRef.current.reset();
       setBodyOutlineKey(prev => prev + 1);
+      stopAllAudio(); // Clear any pending audio
     }
   }, [phase]);
 
-  // Timer logic with screenshot taking and audio announcements
   useEffect(() => {
-    if (phase === 'hydrate' || phase === 'exercise' || phase === 'recovery') {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
-          if ((phase === 'hydrate' || phase === 'recovery') && prev === 5) {
-            const message = phase === 'hydrate' ? 'Your First Round Begin in' : 'Your Second Round Begin in';
-            playAnnouncement(message);
-          }
-          
-          if (prev <= 1) {
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-            }
-            handlePhaseComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-    }
-  }, [phase]);
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
 
   // Audio announcements at start of hydrate and recovery phases
   useEffect(() => {
-    if (phase === 'hydrate' && timeRemaining === 10 && !hasSpokenHydrate) {
+    if (phase === 'hydrate' && !hasSpokenHydrate) {
       playAnnouncement('Hydrate and Energize your body');
       setHasSpokenHydrate(true);
     }
-  }, [phase, timeRemaining, hasSpokenHydrate]);
+  }, [phase, hasSpokenHydrate]);
 
   useEffect(() => {
-    if (phase === 'recovery' && timeRemaining === 10 && !hasSpokenRecovery) {
+    if (phase === 'recovery' && !hasSpokenRecovery) {
       playAnnouncement('Time to Recover and Repeat Stronger your body');
       setHasSpokenRecovery(true);
     }
-  }, [phase, timeRemaining, hasSpokenRecovery]);
+  }, [phase, hasSpokenRecovery]);
 
   useEffect(() => {
     if (phase === 'go') {
@@ -364,69 +415,45 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     setProgressPercent(Math.min(100, Math.max(0, progress)));
   }, [timeRemaining, phase]);
 
-  const handlePhaseComplete = () => {
-    if (phase === 'position-before-hydrate') {
-      // Setelah validasi posisi sebelum hydrate, lanjut ke hydrate
-      setPhase('hydrate');
-      setTimeRemaining(10);
-      setProgressPercent(0);
-    } else if (phase === 'hydrate') {
-      takeScreenshot('hydrate');
-      setProgressPercent(100);
-      setTimeout(() => {
-        setPhase('go');
-        setTimeout(() => {
-          setPhase('exercise');
-          setTimeRemaining(50);
-          setProgressPercent(0);
-          squatCounterRef.current.resetCount();
-          setSquatCount(0);
-          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-        }, 2000);
+  // Timer logic with screenshot taking and audio announcements
+  useEffect(() => {
+    console.log(`Timer started for phase: ${phase}, time: ${timeRemaining}`);
+    
+    if (phase === 'hydrate' || phase === 'exercise' || phase === 'recovery') {
+      const interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          console.log(`Timer tick: ${phase}, remaining: ${prev - 1}`);
+          
+          // Play countdown announcement
+          if ((phase === 'hydrate' || phase === 'recovery') && prev === 5) {
+            const message = phase === 'hydrate' ? 'Your First Round Begin in' : 'Your Second Round Begin in';
+            playAnnouncement(message);
+          }
+          
+          // When timer reaches 0, trigger phase completion
+          if (prev <= 1) {
+            console.log(`Timer finished for phase: ${phase}`);
+            clearInterval(interval);
+            
+            // Call handlePhaseComplete after a small delay to ensure state updates
+            setTimeout(() => {
+              handlePhaseComplete();
+            }, 100);
+            
+            return 0;
+          }
+          
+          return prev - 1;
+        });
       }, 1000);
-    } else if (phase === 'exercise') {
-      setProgressPercent(100);
-      if (currentRound === 1) {
-        // Setelah exercise round 1, langsung ke recovery (bukan position validation)
-        setPhase('recovery');
-        setTimeRemaining(10);
-        setProgressPercent(0);
-      } else {
-        if (!hasSpokenCongratulations) {
-          playAnnouncement('Congratulations! You finished your challenge!');
-          setHasSpokenCongratulations(true);
-        }
-        setTimeout(() => {
-          setPhase('grid');
-        }, 3000);
-      }
-    } else if (phase === 'recovery') {
-      takeScreenshot('recovery');
-      setProgressPercent(100);
-      setTimeout(() => {
-        // Setelah recovery selesai, BARU masuk ke position validation untuk round 2
-        setPhase('position-before-recovery');
-        setProgressPercent(0);
-        // Reset position validator untuk round 2
-        positionValidatorRef.current.reset();
-        setIsPositionConfirmed(false);
-      }, 1000);
-    } else if (phase === 'position-before-recovery') {
-      // Setelah validasi posisi sebelum round 2, langsung ke GO dan exercise round 2
-      setTimeout(() => {
-        setPhase('go');
-        setCurrentRound(2);
-        setTimeout(() => {
-          setPhase('exercise');
-          setTimeRemaining(50);
-          setProgressPercent(0);
-          squatCounterRef.current.resetCount();
-          setSquatCount(0);
-          setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-        }, 2000);
-      }, 3000);
+
+      // Cleanup function
+      return () => {
+        console.log(`Cleaning up timer for phase: ${phase}`);
+        clearInterval(interval);
+      };
     }
-  };
+  }, [phase, handlePhaseComplete]);
 
   // const handlePhaseComplete = (): void => {
   //   if (phase === 'setup') {

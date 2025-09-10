@@ -220,7 +220,7 @@ export const ExercisePhase: React.FC<ExercisePhaseProps> = ({
               
               {/* ROUND text - positioned absolutely to left with DEBUG BORDER */}
               <div 
-                className="absolute left-4 -bottom-2 transform -rotate-90 origin-bottom-left" 
+                className="absolute left-4 bottom-0 transform -rotate-90 origin-bottom-left" 
                 style={{ 
                   transformOrigin: 'left bottom',
                   marginLeft: '20px',

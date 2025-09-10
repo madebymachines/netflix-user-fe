@@ -1,6 +1,5 @@
 import { playAnnouncement } from './AudioUtils';
 
-// Interface for landmark data
 interface Landmark {
   x: number;
   y: number;
@@ -8,18 +7,18 @@ interface Landmark {
   visibility: number;
 }
 
-// Interface for validation result
 interface ValidationResult {
   isValid: boolean;
   message: string;
 }
 
-// Position Validator Class
 export class PositionValidator {
   private isPositionValid: boolean = false;
   private validFrames: number = 0;
-  private readonly requiredValidFrames: number = 10; // Reduced from 15 untuk lebih responsif
+  private readonly requiredValidFrames: number = 15;
   private hasSpokenPositionGood: boolean = false;
+  private lastSpeechTime: number = 0;
+  private speechCooldown: number = 5000; // 5 second cooldown
 
   validatePosition(landmarks: Landmark[]): ValidationResult {
     if (!landmarks || landmarks.length < 33) {
@@ -40,7 +39,7 @@ export class PositionValidator {
 
     // Check if key landmarks are visible
     const keyLandmarks = [leftShoulder, rightShoulder, leftHip, rightHip, leftKnee, rightKnee, leftAnkle, rightAnkle];
-    const minVisibility = 0.4; // Reduced from 0.5 untuk toleransi lebih baik
+    const minVisibility = 0.5;
     
     for (let landmark of keyLandmarks) {
       if (!landmark || landmark.visibility < minVisibility) {
@@ -51,24 +50,34 @@ export class PositionValidator {
       }
     }
 
-    // More lenient body frame checking
+    // Stricter body frame checking
     const minY = Math.min(leftShoulder.y, rightShoulder.y);
     const maxY = Math.max(leftAnkle.y, rightAnkle.y);
     const minX = Math.min(leftShoulder.x, rightShoulder.x, leftHip.x, rightHip.x, leftKnee.x, rightKnee.x, leftAnkle.x, rightAnkle.x);
     const maxX = Math.max(leftShoulder.x, rightShoulder.x, leftHip.x, rightHip.x, leftKnee.x, rightKnee.x, leftAnkle.x, rightAnkle.x);
 
-    // More lenient frame boundaries
-    if (minY < 0.02 || maxY > 0.98 || minX < 0.02 || maxX > 0.98) {
+    if (minY < 0.05 || maxY > 0.95 || minX < 0.05 || maxX > 0.95) {
       this.validFrames = 0;
       this.isPositionValid = false;
       this.hasSpokenPositionGood = false;
       return { isValid: false, message: "Step back so your whole body is visible" };
     }
 
-    // More lenient body width checking
+    // Tambahkan validasi tinggi badan
+    const bodyHeight = maxY - minY;
+    const minBodyHeight = 0.6;
+    
+    if (bodyHeight < minBodyHeight) {
+      this.validFrames = 0;
+      this.isPositionValid = false;
+      this.hasSpokenPositionGood = false;
+      return { isValid: false, message: "Step back so your whole body is visible" };
+    }
+
+    // Stricter body width checking
     const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
     const hipWidth = Math.abs(leftHip.x - rightHip.x);
-    const minBodyWidth = 0.06; // Reduced from 0.08
+    const minBodyWidth = 0.08;
     
     if (shoulderWidth < minBodyWidth || hipWidth < minBodyWidth) {
       this.validFrames = 0;
@@ -77,11 +86,11 @@ export class PositionValidator {
       return { isValid: false, message: "Face the camera and get into position" };
     }
 
-    // More lenient body alignment
+    // Stricter body alignment
     const shoulderCenter = (leftShoulder.x + rightShoulder.x) / 2;
     const hipCenter = (leftHip.x + rightHip.x) / 2;
     const bodyAlignment = Math.abs(shoulderCenter - hipCenter);
-    const maxBodyMisalignment = 0.12; // Increased from 0.08
+    const maxBodyMisalignment = 0.08;
     
     if (bodyAlignment > maxBodyMisalignment) {
       this.validFrames = 0;
@@ -93,11 +102,20 @@ export class PositionValidator {
     // Position looks good, increment valid frames
     this.validFrames++;
     
-    // Speak "Perfect position" when close to valid but not yet confirmed
-    if (this.validFrames >= 5 && !this.hasSpokenPositionGood) {
+    // FIXED: Better audio control with stricter conditions
+    const currentTime = Date.now();
+    if (this.validFrames >= 10 && 
+        !this.hasSpokenPositionGood && 
+        (currentTime - this.lastSpeechTime) > this.speechCooldown) {
+      
+      console.log('Position validator: Speaking "Perfect position"');
       this.hasSpokenPositionGood = true;
-      // Use the improved audio system
-      playAnnouncement("Perfect position! Hold steady!");
+      this.lastSpeechTime = currentTime;
+      
+      // // Use timeout and force flag to ensure audio plays
+      // setTimeout(() => {
+      //   playAnnouncement("Perfect position! Hold steady!", false);
+      // }, 200);
     }
     
     if (this.validFrames >= this.requiredValidFrames) {
@@ -109,8 +127,10 @@ export class PositionValidator {
   }
 
   reset(): void {
+    console.log('PositionValidator: Resetting all flags');
     this.isPositionValid = false;
     this.validFrames = 0;
     this.hasSpokenPositionGood = false;
+    this.lastSpeechTime = 0;
   }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 import YouTubeVideo from './YoutubeVideo';
-import { enableAudio, testAudio } from '../../utils/AudioUtils';
+import { enableAudio } from '../../utils/AudioUtils';
 
 // Interface for SetupPage props
 interface SetupPageProps {
@@ -33,7 +33,6 @@ const SetupPage: React.FC<SetupPageProps> = ({
   const handleContinue = async (): Promise<void> => {
     // Test audio before continuing
     console.log('Testing audio before starting challenge...');
-    await testAudio();
     onContinue();
   };
 
