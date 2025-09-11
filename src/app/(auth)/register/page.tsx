@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
@@ -21,13 +21,6 @@ type ValidatorError = {
   path?: string;
   param?: string;
   field?: string;
-};
-
-type ServerErrorPayload = {
-  message?: string;
-  details?: JoiDetail[];
-  errors?: ValidatorError[];
-  code?: number | string;
 };
 
 type FieldErr<T> = { path: keyof T; message: string };
@@ -77,10 +70,6 @@ const registerSchema = z
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
-
-/* ===========================
-   Error extractor (no any)
-   =========================== */
 
 function extractServerErrors<TFields>(
   payload: unknown,
@@ -148,15 +137,13 @@ function extractServerErrors<TFields>(
   return result;
 }
 
-/* ===========================
-   Component
-   =========================== */
-
 export default function RegisterPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
   const router = useRouter();
+
+  const API_BASE = "/api/v1";
 
   useEffect(() => {
     try {
@@ -211,7 +198,7 @@ export default function RegisterPage() {
     const countryCode = (country || DEFAULT_CODE).toUpperCase();
 
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      await axios.post(`${API_BASE}/auth/register`, {
         name: data.name,
         username: data.username,
         email: data.email,
@@ -225,33 +212,45 @@ export default function RegisterPage() {
 
       router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
-      const axErr = err as AxiosError<ServerErrorPayload>;
-      if (axios.isAxiosError(axErr)) {
-        const payload = axErr.response?.data;
+      if (axios.isAxiosError(err)) {
+        // aman kalau server balas HTML 404 dari FE
+        const ct = err.response?.headers?.["content-type"] as
+          | string
+          | undefined;
+        const data = err.response?.data;
+        const looksHtml =
+          (typeof data === "string" && /<\s*html|<!doctype/i.test(data)) ||
+          (ct && ct.includes("text/html"));
 
-        // map pesan global yang sudah kita kenal ke field spesifik
-        const mapper = (m: string): Array<FieldErr<RegisterFormInputs>> => {
-          const arr: Array<FieldErr<RegisterFormInputs>> = [];
-          if (m.includes("Email already taken"))
-            arr.push({ path: "email", message: m });
-          if (m.includes("Username already taken"))
-            arr.push({ path: "username", message: m });
-          return arr;
-        };
-
-        const { formMessage, fieldErrors } =
-          extractServerErrors<RegisterFormInputs>(payload, mapper);
-
-        setApiError(formMessage);
-        fieldErrors.forEach(({ path, message }) => {
-          setError(path, { type: "server", message });
-        });
+        if (looksHtml) {
+          setApiError(
+            `${err.response?.status || ""} ${
+              err.response?.statusText || "Request failed"
+            }`
+          );
+        } else {
+          const { formMessage, fieldErrors } =
+            extractServerErrors<RegisterFormInputs>(data, (m) => {
+              const arr: Array<{
+                path: keyof RegisterFormInputs;
+                message: string;
+              }> = [];
+              if (m.includes("Email already taken"))
+                arr.push({ path: "email", message: m });
+              if (m.includes("Username already taken"))
+                arr.push({ path: "username", message: m });
+              return arr;
+            });
+          setApiError(formMessage);
+          fieldErrors.forEach(({ path, message }) =>
+            setError(path, { type: "server", message })
+          );
+        }
       } else {
         setApiError("Terjadi kesalahan tak terduga. Silakan coba lagi.");
       }
     }
   };
-
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
