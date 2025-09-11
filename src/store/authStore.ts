@@ -10,6 +10,7 @@ export interface User {
   country?: string;
   profilePictureUrl?: string | null;
   purchaseStatus: string;
+  gender?: string;
 }
 
 export interface UserStats {

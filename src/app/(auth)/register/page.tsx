@@ -25,7 +25,6 @@ const DEFAULT_CODE = "MY";
 const codeToLabel = (code?: string | null) =>
   COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
 
-/** Normalisasi nomor: hilangkan semua non-digit, buang 0 di depan. */
 const normalizeNumber = (raw?: string) => {
   const digits = String(raw || "").replace(/\D+/g, "");
   return digits.replace(/^0+/, "");
@@ -36,6 +35,7 @@ const registerSchema = z
     name: z.string().min(1, "Full Name is required"),
     username: z.string().min(1, "Username is required"),
     email: z.string().email("Invalid email address"),
+    gender: z.enum(["MALE", "FEMALE"]),
     phoneNumber: z.string().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
@@ -75,7 +75,7 @@ export default function RegisterPage() {
     watch,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { agree: false },
+    defaultValues: { agree: false, gender: "MALE" },
     mode: "onChange",
   });
 
@@ -87,7 +87,6 @@ export default function RegisterPage() {
     return codeToLabel(DEFAULT_CODE) || DEFAULT_CODE;
   }, [country]);
 
-  /** Dial code dinamis—fallback ke default */
   const dialCode = useMemo(() => {
     const c = (country || DEFAULT_CODE).toUpperCase();
     return COUNTRY_DIAL[c] || COUNTRY_DIAL[DEFAULT_CODE];
@@ -117,7 +116,10 @@ export default function RegisterPage() {
         username: data.username,
         email: data.email,
         password: data.password,
-        phoneNumber: data.phoneNumber,
+        gender: data.gender,
+        phoneNumber: data.phoneNumber
+          ? `${dialCode}${normalizeNumber(data.phoneNumber)}`
+          : undefined,
         country: countryCode,
       });
 
@@ -149,6 +151,7 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Full Name */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
               Full Name
@@ -163,6 +166,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Username */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
               Username
@@ -179,6 +183,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Email */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">Email</label>
             <input
@@ -193,6 +198,42 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Gender */}
+          <div>
+            <label className="block text-[12px] mb-1 opacity-80">Gender</label>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Male */}
+              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
+                <input
+                  type="radio"
+                  value="MALE"
+                  {...register("gender")}
+                  className="h-4 w-4 accent-red-600"
+                />
+                <span>Male</span>
+              </label>
+
+              {/* Female */}
+              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
+                <input
+                  type="radio"
+                  value="FEMALE"
+                  {...register("gender")}
+                  className="h-4 w-4 accent-red-600"
+                />
+                <span>Female</span>
+              </label>
+            </div>
+
+            {errors.gender && (
+              <p className="text-red-500 text-xs mt-1">
+                {errors.gender.message}
+              </p>
+            )}
+          </div>
+
+          {/* Phone */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
               Phone Number
@@ -218,6 +259,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Password */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
               Create New Password
@@ -235,6 +277,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Confirm Password */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
               Re-type New Password
@@ -252,6 +295,7 @@ export default function RegisterPage() {
             )}
           </div>
 
+          {/* Agree */}
           <label className="flex items-start gap-2 text-[12px] leading-snug">
             <input
               {...register("agree")}
@@ -270,12 +314,14 @@ export default function RegisterPage() {
             <p className="text-red-500 text-xs -mt-4">{errors.agree.message}</p>
           )}
 
+          {/* Error API */}
           {apiError && (
             <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
               {apiError}
             </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={!agreeChecked || isSubmitting}

@@ -47,26 +47,44 @@ type LeaderboardResponse = {
   leaderboard: Row[];
 };
 
+function frameForPoints(points: number | null | undefined): string {
+  const p = Math.max(0, Number(points ?? 0));
+  if (p >= 6000) return "/images/f_legendary.png";
+  if (p >= 3000) return "/images/f_warrior.png";
+  if (p >= 1000) return "/images/f_challenger.png";
+  return "/images/f_rookie.png";
+}
+
 function HexFrameAvatar({
   size = 88,
   src,
+  points,
   rankBadge,
+  gender,
   className = "",
 }: {
   size?: number;
   src?: string | null;
+  points?: number | null;
   rankBadge?: 1 | 2 | 3;
+  gender?: "MALE" | "FEMALE";
   className?: string;
 }) {
   const HEX = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
   const inset = Math.round(size * 0.16);
+  const frameSrc = frameForPoints(points);
+
+  const genderPlaceholder =
+    gender === "FEMALE"
+      ? "/images/placeholder_female.png"
+      : "/images/placeholder_male.png";
 
   return (
     <div
       className={`relative inline-block ${className}`}
       style={{ width: size, height: size }}
     >
-      {/* Foto */}
+      {/* Foto ter-clip */}
       <div
         className="absolute inset-0"
         style={{ clipPath: HEX, padding: inset, boxSizing: "border-box" }}
@@ -76,7 +94,7 @@ function HexFrameAvatar({
           style={{ clipPath: HEX }}
         >
           <Image
-            src={src || "/images/bottle.png"}
+            src={src || genderPlaceholder}
             alt="avatar"
             fill
             sizes={`${size}px`}
@@ -85,15 +103,17 @@ function HexFrameAvatar({
           />
         </div>
       </div>
+
       {/* Frame */}
       <Image
-        src="/images/f_legendary.png"
+        src={frameSrc}
         alt="frame"
         fill
         sizes={`${size}px`}
         style={{ objectFit: "contain", pointerEvents: "none" }}
         priority={false}
       />
+
       {/* Badge rank */}
       {rankBadge && (
         <div className="absolute -bottom-2 -left-2">
@@ -248,11 +268,9 @@ export default function LeaderboardPage() {
   const shareRegionLabel = regionIsGlobal ? "Global" : homeRegionLabel;
 
   const shareRef = useRef<HTMLDivElement>(null);
-
   const handleShare = async () => {
     const node = shareRef.current;
     if (!node) return;
-
     try {
       const dataUrl = await htmlToImage.toPng(node, {
         pixelRatio: 3,
@@ -260,8 +278,6 @@ export default function LeaderboardPage() {
         skipFonts: false,
         cacheBust: true,
       });
-
-      // Konversi ke Blob + File
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File(
@@ -270,7 +286,6 @@ export default function LeaderboardPage() {
         { type: "image/png" }
       );
 
-      // Web Share API (Android/Chrome → bisa ke Instagram/TikTok dari share sheet)
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: "Leaderboard",
@@ -280,7 +295,6 @@ export default function LeaderboardPage() {
         return;
       }
 
-      // Fallback: download PNG
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = file.name;
@@ -312,7 +326,6 @@ export default function LeaderboardPage() {
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      {/* ====== AREA YANG DICAPTURE (wrap SEMUA konten share ke dalam div referensi) ====== */}
       <div ref={shareRef} className="relative z-10 w-full text-white px-4 pb-6">
         <div className="w-full flex justify-center pt-2">
           <Image src="/images/logo2.png" alt="unlock" width={205} height={73} />
@@ -359,6 +372,8 @@ export default function LeaderboardPage() {
               const size = idx === 1 ? 92 : 82;
               const rank = (idx === 1 ? 1 : idx === 0 ? 2 : 3) as 1 | 2 | 3;
               const shiftY = idx === 1 ? -12 : 20;
+              const pts = p?.points ?? 0;
+
               return (
                 <div
                   key={rank}
@@ -368,6 +383,7 @@ export default function LeaderboardPage() {
                   <HexFrameAvatar
                     size={size}
                     src={p?.profilePictureUrl || null}
+                    points={pts}
                     rankBadge={rank}
                   />
                   <div
@@ -378,7 +394,7 @@ export default function LeaderboardPage() {
                     @{p?.username ?? "-"}
                   </div>
                   <div className="text-[10px] opacity-90">
-                    {(p?.points ?? 0).toLocaleString("id-ID")}
+                    {pts.toLocaleString("id-ID")}
                   </div>
                 </div>
               );
@@ -417,7 +433,6 @@ export default function LeaderboardPage() {
           </div>
         </div>
       </div>
-      {/* ====== /AREA YANG DICAPTURE ====== */}
 
       {/* Tombol Share */}
       <div className="relative z-10 w-[320px] mx-auto -mt-2 mb-6">

@@ -32,6 +32,35 @@ type WeeklyAPI = {
   averageChallengePerWeek: number;
 };
 
+function getLevelAssets(points: number) {
+  if (points >= 6000) {
+    return {
+      frame: "/images/f_legendary.png",
+      tag: "/images/t_legendary.png",
+      label: "Legendary",
+    };
+  }
+  if (points >= 3000) {
+    return {
+      frame: "/images/f_warrior.png",
+      tag: "/images/t_warrior.png",
+      label: "Warrior",
+    };
+  }
+  if (points >= 1000) {
+    return {
+      frame: "/images/f_challenger.png",
+      tag: "/images/t_challenger.png",
+      label: "Challenger",
+    };
+  }
+  return {
+    frame: "/images/f_rookie.png",
+    tag: "/images/t_rookie.png",
+    label: "Rookie",
+  };
+}
+
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [weeklyApi, setWeeklyApi] = useState<WeeklyAPI | null>(null);
@@ -49,7 +78,6 @@ export default function DashboardPage() {
           "/user/purchase-verification/status",
           { _skipAuthRefresh: true }
         );
-
         if (!active) return;
 
         if (data.status === "REJECTED") {
@@ -80,12 +108,19 @@ export default function DashboardPage() {
     };
   }, [menuOpen]);
 
+  const genderPlaceholder =
+    (user?.gender as "MALE" | "FEMALE") === "FEMALE"
+      ? "/images/placeholder_female.png"
+      : "/images/placeholder_male.png";
+
   const userDisplayData = {
     name: user?.name ?? "User",
     username: user?.username ?? "username",
     points: stats?.totalPoints ?? 0,
-    photoUrl: user?.profilePictureUrl ?? "",
+    photoUrl: user?.profilePictureUrl || genderPlaceholder,
   };
+
+  const levelAssets = getLevelAssets(userDisplayData.points);
 
   const statsCards = [
     { value: stats?.totalChallenges ?? 0, l1: "COMPLETED", l2: "CHALLENGE" },
@@ -191,12 +226,12 @@ export default function DashboardPage() {
           <div className="relative w-[116px] h-[116px] shrink-0">
             <div
               className="
-        absolute inset-[18%] overflow-hidden
-        [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]
-      "
+                absolute inset-[18%] overflow-hidden
+                [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]
+              "
             >
               <Image
-                src={userDisplayData.photoUrl || "/images/bottle.png"}
+                src={userDisplayData.photoUrl}
                 alt="User"
                 fill
                 sizes="116px"
@@ -205,10 +240,9 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* FRAME */}
             <Image
-              src="/images/f_legendary.png"
-              alt="Legendary frame"
+              src={levelAssets.frame}
+              alt={`${levelAssets.label} frame`}
               fill
               sizes="116px"
               style={{ objectFit: "contain" }}
@@ -217,22 +251,23 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="w-[74px] h-[116px] grid place-items-center shrink-0">
+          <div>
             <Image
-              src="/images/legendary.png"
-              alt="Legendary Badge"
-              width={74}
-              height={116}
+              src={levelAssets.tag}
+              alt={`${levelAssets.label} tag`}
+              width={40}
+              height={40}
               priority
               className="object-contain opacity-90"
             />
           </div>
 
-          {/* data pengguna */}
+          {/* Data pengguna */}
           <div className="flex-1 h-[116px] flex flex-col justify-center">
             <div className="font-heading text-[12px] tracking-[.02em] leading-none">
               {userDisplayData.name}
             </div>
+
             <div className="flex items-end gap-2">
               {/* Physical Points */}
               <div className="flex flex-col items-center justify-end h-[55px]">
@@ -262,7 +297,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Stats */}
+        {/* Stats singkat */}
         <section className="grid grid-cols-3 w-[320px] h-[64px]">
           {statsCards.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
@@ -286,17 +321,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-1 flex justify-between">
+              {/* Chart kiri */}
               <div className="w-[193px] h-[109px]">
                 <div className="flex items-end gap-[10px] h-[90px]">
                   {barHeights.map((h, i) => {
-                    const isActive = dayValues[i] > 0;
+                    const active = dayValues[i] > 0;
                     return (
                       <div
                         key={i}
                         className="w-[14px] rounded-t-md transition-[height] duration-300"
                         style={{
                           height: h,
-                          background: isActive
+                          background: active
                             ? "linear-gradient(180deg,#ff3b3b,#a40012)"
                             : "linear-gradient(180deg,#6a6a6a,#434343)",
                         }}
@@ -312,6 +348,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Angka kanan */}
               <div className="w-[56px] h-[102px] text-right mr-4">
                 <div className="font-heading tabular-nums text-[30px] leading-none">
                   {Intl.NumberFormat("id-ID").format(challengePerWeek)}
