@@ -1,4 +1,3 @@
-// src/app/(auth)/check-email/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";

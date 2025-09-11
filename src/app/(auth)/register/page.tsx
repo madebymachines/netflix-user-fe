@@ -4,16 +4,51 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 
-const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
-const COUNTRY_DIAL: Record<string, string> = {
-  MY: "+60",
+type JoiDetail = {
+  message: string;
+  path: string[] | string;
 };
+
+type ValidatorError = {
+  message?: string;
+  msg?: string;
+  path?: string;
+  param?: string;
+  field?: string;
+};
+
+type ServerErrorPayload = {
+  message?: string;
+  details?: JoiDetail[];
+  errors?: ValidatorError[];
+  code?: number | string;
+};
+
+type FieldErr<T> = { path: keyof T; message: string };
+
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === "object" && val !== null;
+}
+
+function isJoiDetailArray(val: unknown): val is JoiDetail[] {
+  return (
+    Array.isArray(val) &&
+    val.every((x) => isRecord(x) && typeof x.message === "string")
+  );
+}
+
+function isValidatorErrArray(val: unknown): val is ValidatorError[] {
+  return Array.isArray(val) && val.every((x) => isRecord(x));
+}
+
+const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
+const COUNTRY_DIAL: Record<string, string> = { MY: "+60" };
 const DEFAULT_CODE = "MY";
 const codeToLabel = (code?: string | null) =>
   COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
@@ -42,9 +77,80 @@ const registerSchema = z
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
-interface ApiErrorResponse {
-  message: string;
+
+/* ===========================
+   Error extractor (no any)
+   =========================== */
+
+function extractServerErrors<TFields>(
+  payload: unknown,
+  mapKnown?: (msg: string) => Array<FieldErr<TFields>>
+): { formMessage: string; fieldErrors: Array<FieldErr<TFields>> } {
+  const result = {
+    formMessage: "Registration failed",
+    fieldErrors: [] as Array<FieldErr<TFields>>,
+  };
+
+  if (!payload) return result;
+
+  // string payload
+  if (typeof payload === "string") {
+    result.formMessage = payload;
+    if (mapKnown) result.fieldErrors.push(...mapKnown(payload));
+    return result;
+  }
+
+  if (!isRecord(payload)) return result;
+
+  // generic message
+  const msg = typeof payload.message === "string" ? payload.message : undefined;
+  if (msg) {
+    result.formMessage = msg;
+    if (mapKnown) result.fieldErrors.push(...mapKnown(msg));
+  }
+
+  // Joi / Celebrate
+  if (isJoiDetailArray(payload.details)) {
+    payload.details.forEach((e) => {
+      const pathRaw = Array.isArray(e.path) ? e.path[0] : e.path;
+      if (typeof pathRaw === "string") {
+        result.fieldErrors.push({
+          path: pathRaw as keyof TFields,
+          message: e.message || "Invalid value",
+        });
+      }
+    });
+    if (!msg && payload.details.length) {
+      result.formMessage = payload.details.map((x) => x.message).join(", ");
+    }
+  }
+
+  // express-validator style
+  if (isValidatorErrArray(payload.errors)) {
+    payload.errors.forEach((e) => {
+      const p = e.path || e.param || e.field;
+      const m = e.msg || e.message || "Invalid value";
+      if (p) {
+        result.fieldErrors.push({
+          path: p as keyof TFields,
+          message: m,
+        });
+      }
+    });
+    if (!msg && payload.errors.length) {
+      result.formMessage = payload.errors
+        .map((x) => x.msg || x.message || "")
+        .filter(Boolean)
+        .join(", ");
+    }
+  }
+
+  return result;
 }
+
+/* ===========================
+   Component
+   =========================== */
 
 export default function RegisterPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,6 +172,7 @@ export default function RegisterPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     watch,
+    setError,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
     defaultValues: { agree: false, gender: "MALE" },
@@ -104,7 +211,7 @@ export default function RegisterPage() {
     const countryCode = (country || DEFAULT_CODE).toUpperCase();
 
     try {
-      await axios.post(process.env.NEXT_PUBLIC_API_URL + "/auth/register", {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
         name: data.name,
         username: data.username,
         email: data.email,
@@ -117,11 +224,30 @@ export default function RegisterPage() {
       });
 
       router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-    } catch (error: unknown) {
-      if (axios.isAxiosError<ApiErrorResponse>(error)) {
-        setApiError(error.response?.data?.message || "Registration failed");
+    } catch (err) {
+      const axErr = err as AxiosError<ServerErrorPayload>;
+      if (axios.isAxiosError(axErr)) {
+        const payload = axErr.response?.data;
+
+        // map pesan global yang sudah kita kenal ke field spesifik
+        const mapper = (m: string): Array<FieldErr<RegisterFormInputs>> => {
+          const arr: Array<FieldErr<RegisterFormInputs>> = [];
+          if (m.includes("Email already taken"))
+            arr.push({ path: "email", message: m });
+          if (m.includes("Username already taken"))
+            arr.push({ path: "username", message: m });
+          return arr;
+        };
+
+        const { formMessage, fieldErrors } =
+          extractServerErrors<RegisterFormInputs>(payload, mapper);
+
+        setApiError(formMessage);
+        fieldErrors.forEach(({ path, message }) => {
+          setError(path, { type: "server", message });
+        });
       } else {
-        setApiError("An unexpected error occurred. Please try again.");
+        setApiError("Terjadi kesalahan tak terduga. Silakan coba lagi.");
       }
     }
   };
@@ -194,9 +320,7 @@ export default function RegisterPage() {
           {/* Gender */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">Gender</label>
-
             <div className="grid grid-cols-2 gap-4">
-              {/* Male */}
               <label className="flex items-center gap-2 border-b border-white/40 pb-2">
                 <input
                   type="radio"
@@ -206,8 +330,6 @@ export default function RegisterPage() {
                 />
                 <span>Male</span>
               </label>
-
-              {/* Female */}
               <label className="flex items-center gap-2 border-b border-white/40 pb-2">
                 <input
                   type="radio"
@@ -218,7 +340,6 @@ export default function RegisterPage() {
                 <span>Female</span>
               </label>
             </div>
-
             {errors.gender && (
               <p className="text-red-500 text-xs mt-1">
                 {errors.gender.message}
@@ -232,10 +353,7 @@ export default function RegisterPage() {
               Phone Number
             </label>
             <div className="flex items-center gap-2">
-              <span
-                className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none"
-                aria-label="Country dial code"
-              >
+              <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
                 {dialCode}
               </span>
               <input
