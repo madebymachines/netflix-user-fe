@@ -93,7 +93,7 @@ export const HydratePhase: React.FC<ProgressPhaseProps> = ({
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
               />
-              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-none -mb-1">HYDRATE AND ENERGIZE</span>
+              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-none">HYDRATE AND ENERGIZE</span>
             </div>
           </div>
         </div>
@@ -167,7 +167,7 @@ export const RecoveryPhase: React.FC<ProgressPhaseProps> = ({
                 className="absolute inset-0 bg-[#FF0000] transition-all duration-1000 ease-linear"
                 style={{ width: `${progressPercent}%` }}
               />
-              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-none -mb-1">RECOVER &amp; REPEAT</span>
+              <span className="relative z-10 text-[30px] font-vancouver font-regular leading-none">RECOVER &amp; REPEAT</span>
             </div>
           </div>
         </div>

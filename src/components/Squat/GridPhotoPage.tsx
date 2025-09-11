@@ -139,7 +139,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     await loadFonts();
     
     canvas.width = 400;
-    canvas.height = 780;
+    canvas.height = 760;
     
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -193,7 +193,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
               const bannerHeight = 25;
-              const bannerY = y + photoHeight * 0.55;
+              const bannerY = y + photoHeight * 0.65;
               
               // Progress percentage (you can make this dynamic based on your app state)
               const progressPercent = 0.90;
@@ -264,7 +264,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 14px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.translate(x + 45, centerY - 20);
+              ctx.translate(x + 45, centerY - 10);
               ctx.rotate(-Math.PI / 2);
               ctx.fillText('ROUND 1', 0, 0);
               ctx.restore();
@@ -283,12 +283,37 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
               const bannerHeight = 25;
-              const bannerY = y + photoHeight * 0.55;
+              const bannerY = y + photoHeight * 0.65; // atau sesuai perubahan sebelumnya
               
-              // Progress percentage (you can make this dynamic based on your app state)
+              // Progress percentage
               const progressPercent = 0.90;
               const progressWidth = bannerWidth * progressPercent;
               
+              // Black subtitle banner - PINDAH KE ATAS (sebelum progress bar)
+              const gap = 5;
+              const blackBannerHeight = 18;
+              
+              // Measure text width and add padding
+              ctx.font = 'bold 10px "URW Geometric"';
+              const textMetrics = ctx.measureText("IT'S TIME TO");
+              const blackBannerWidth = textMetrics.width + 20;
+              const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
+              
+              // Posisi black banner DI ATAS progress bar
+              const blackBannerY = bannerY - blackBannerHeight - gap; // Ubah ke atas
+              
+              // Draw black banner terlebih dahulu (di atas)
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              ctx.beginPath();
+              ctx.roundRect(blackBannerX, blackBannerY, blackBannerWidth, blackBannerHeight, 5);
+              ctx.fill();
+              
+              ctx.fillStyle = '#FFFFFF';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + blackBannerHeight/2);
+              
+              // Kemudian draw progress bar (di bawah black banner)
               // Draw background (black)
               ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
               ctx.beginPath();
@@ -308,41 +333,16 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.textBaseline = 'middle'; 
               ctx.fillText('RECOVER & REPEAT STRONGER', x + photoWidth/2, bannerY + bannerHeight/2);
               
-              // Draw bottle icon at the END of the progress bar (not banner width)
+              // Draw bottle icon (tetap sama)
               try {
                 const bottleImg = await loadImage('./images/bottle.png');
                 const bottleSize = 30;
-    
-                // Posisi X: TEPAT di tepi kanan progress bar (bukan masuk ke dalam)
                 const bottleX = bannerX + progressWidth - bottleSize/2;
-                
-                // Posisi Y: DI ATAS progress bar dengan jarak yang cukup
-                const bottleY = bannerY - bottleSize - 1; // 8px gap di atas bar
+                const bottleY = bannerY - bottleSize - 1;
                 ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
               } catch (bottleError) {
                 console.error('Error loading bottle image:', bottleError);
               }
-              
-              // Black subtitle banner - adjust width to fit text
-              const gap = 5;
-              const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 18;
-              
-              // Measure text width and add padding
-              ctx.font = 'bold 10px "URW Geometric"';
-              const textMetrics = ctx.measureText("IT'S TIME TO");
-              const blackBannerWidth = textMetrics.width + 20; // Add 20px padding
-              const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.beginPath();
-              ctx.roundRect(blackBannerX, blackBannerY, blackBannerWidth, blackBannerHeight, 5);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FFFFFF';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + blackBannerHeight/2);
             }
             else if (i === 3) {
               const counterAreaY = y + photoHeight * 0.55;
@@ -356,7 +356,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 14px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.translate(x + 45, centerY - 20);
+              ctx.translate(x + 45, centerY - 10);
               ctx.rotate(-Math.PI / 2);
               ctx.fillText('ROUND 2', 0, 0);
               ctx.restore();
@@ -383,7 +383,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       }
       
       // Draw stats section with proper spacing
-      const statsStartY = gridStartY + gridHeight + 15;
+      const statsStartY = gridStartY + gridHeight + 10;
       const statsHeight = 120;
       
       ctx.fillStyle = '#000000';
@@ -405,7 +405,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle'; 
-      ctx.translate(statsCenterX - 60, statsCenterY + 15); 
+      ctx.translate(statsCenterX - 60, statsCenterY + 20); 
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
@@ -428,7 +428,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.font = 'bold 15px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle'; 
-      ctx.translate(statsCenterX + 190, statsCenterY + 15);
+      ctx.translate(statsCenterX + 185, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
@@ -498,7 +498,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     >
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-start pt-2">
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm px-5">
           <canvas 
             ref={canvasRef} 
             className="max-w-full h-auto border border-gray-600 rounded-lg"
@@ -508,7 +508,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             <img 
               src={gridImage} 
               alt="Squat Challenge Grid" 
-              className="max-w-full h-auto rounded-lg shadow-lg mb-4" 
+              className="w-full h-auto rounded-lg shadow-lg mb-4" 
             />
           )}
 
@@ -533,19 +533,21 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
         </div>
 
         {/* Share Button */}
-        <button
-          onClick={handleShare}
-          disabled={!gridImage}
-          className={`w-full max-w-sm text-white py-1 px-8 rounded-md transition-colors flex items-center justify-center ${
-            gridImage 
-              ? 'bg-[#FF0000] hover:bg-[#CC0000]' 
-              : 'bg-gray-600 cursor-not-allowed'
-          }`}
-        >
-          <span className="text-white text-[24px] font-vancouver font-regular">
-            SHARE TO COLLECT POINTS
-          </span>
-        </button>
+        <div className='w-full max-w-sm px-4'>
+          <button
+            onClick={handleShare}
+            disabled={!gridImage}
+            className={`w-full max-w-sm text-white py-1 px-8 rounded-md transition-colors flex items-center justify-center ${
+              gridImage 
+                ? 'bg-[#FF0000] hover:bg-[#CC0000]' 
+                : 'bg-gray-600 cursor-not-allowed'
+            }`}
+          >
+            <span className="text-white text-[24px] font-vancouver font-regular">
+              SHARE TO COLLECT POINTS
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );
