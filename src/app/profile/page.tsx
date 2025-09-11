@@ -10,12 +10,19 @@ import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 
+type Gender = "MALE" | "FEMALE" | "";
 type FormState = {
   fullName: string;
   username: string;
   email: string;
   phone: string;
+  gender: Gender;
 };
+
+const genderPlaceholder = (g?: "MALE" | "FEMALE" | "") =>
+  g === "FEMALE"
+    ? "/images/placeholder_female.png"
+    : "/images/placeholder_male.png";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -31,7 +38,7 @@ export default function ProfilePage() {
     setTimeout(() => {
       setToast(null);
       router.push("/dashboard");
-    }, 2000);
+    }, 1500);
   };
 
   // ==== Avatar state ====
@@ -47,6 +54,7 @@ export default function ProfilePage() {
       username: user?.username ?? "",
       email: user?.email ?? "",
       phone: user?.phoneNumber ?? "",
+      gender: (user?.gender as Gender) ?? "",
     }),
     [user]
   );
@@ -98,9 +106,7 @@ export default function ProfilePage() {
       setIsUploadingPhoto(true);
       const fd = new FormData();
       fd.append("profilePicture", avatarFile);
-
       await api.post("/user/me/profile-picture", fd);
-
       await checkAuth();
       showToastThenDashboard("Profile picture updated!");
       setAvatarFile(null);
@@ -125,11 +131,19 @@ export default function ProfilePage() {
     if (!user) return;
     setIsUpdating(true);
     try {
-      const payload = {
+      const payload: {
+        name: string;
+        username: string;
+        phoneNumber?: string;
+        gender?: "MALE" | "FEMALE";
+      } = {
         name: form.fullName.trim(),
         username: form.username.trim(),
-        phoneNumber: form.phone.trim() || undefined,
       };
+      const phone = form.phone.trim();
+      if (phone) payload.phoneNumber = phone;
+      if (form.gender) payload.gender = form.gender as "MALE" | "FEMALE";
+
       await api.put("/user/me", payload);
       await checkAuth();
       showToastThenDashboard("Profile updated successfully!");
@@ -162,6 +176,13 @@ export default function ProfilePage() {
   }
 
   const isBlobPreview = avatarUrl.startsWith("blob:");
+
+  const effectiveGender = (form.gender ||
+    (user?.gender as Gender) ||
+    "") as Gender;
+  const avatarSrc = isBlobPreview
+    ? avatarUrl
+    : user?.profilePictureUrl || genderPlaceholder(effectiveGender);
 
   return (
     <MobileShell
@@ -207,12 +228,16 @@ export default function ProfilePage() {
                 />
               ) : (
                 <Image
-                  src={user?.profilePictureUrl || "/images/bottle.png"}
+                  src={avatarSrc}
                   alt="Avatar"
                   fill
                   sizes="120px"
                   style={{ objectFit: "cover" }}
-                  className={!user?.profilePictureUrl ? "opacity-80" : ""}
+                  className={
+                    !user?.profilePictureUrl && !isBlobPreview
+                      ? "opacity-80"
+                      : ""
+                  }
                 />
               )}
             </div>
@@ -258,6 +283,39 @@ export default function ProfilePage() {
             onChange={(v) => setForm((s) => ({ ...s, username: v }))}
             required
           />
+
+          {/* Gender */}
+          <div>
+            <div className="text-[12px] mb-1 opacity-80">Gender</div>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 border-b border-white/30 pb-2">
+                <input
+                  type="radio"
+                  value="MALE"
+                  checked={form.gender === "MALE"}
+                  onChange={() =>
+                    setForm((s) => ({ ...s, gender: "MALE" as Gender }))
+                  }
+                  className="h-4 w-4 accent-red-600"
+                />
+                <span>Male</span>
+              </label>
+
+              <label className="flex items-center gap-2 border-b border-white/30 pb-2">
+                <input
+                  type="radio"
+                  value="FEMALE"
+                  checked={form.gender === "FEMALE"}
+                  onChange={() =>
+                    setForm((s) => ({ ...s, gender: "FEMALE" as Gender }))
+                  }
+                  className="h-4 w-4 accent-red-600"
+                />
+                <span>Female</span>
+              </label>
+            </div>
+          </div>
+
           <Field
             label="Email"
             value={form.email}
