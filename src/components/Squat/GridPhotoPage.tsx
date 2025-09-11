@@ -38,14 +38,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     generateGridImage();
   }, [photos]);
 
-  // Auto-submit activity when grid image is generated
-  useEffect(() => {
-    if (gridImage && !isSubmissionComplete && !submissionError) {
-      handleAutoSubmitActivity();
-    }
-  }, [gridImage]);
 
-  const handleAutoSubmitActivity = async (): Promise<void> => {
+  const handleSubmitActivity = async (): Promise<void> => {
     if (!gridImage) return;
 
     try {
@@ -452,6 +446,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       console.log('No grid image available for sharing');
       return;
     }
+
+    await handleSubmitActivity();
 
     try {
       const response = await fetch(gridImage);
