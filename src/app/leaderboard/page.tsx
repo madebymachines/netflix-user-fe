@@ -12,11 +12,7 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 import * as htmlToImage from "html-to-image";
 
-const COUNTRIES = [
-  { code: "MY", label: "Malaysia" },
-  { code: "SG", label: "Singapore" },
-  { code: "TH", label: "Thailand" },
-];
+const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
 
 const codeToLabel = (code?: string | null) =>
   COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label ??
@@ -131,39 +127,6 @@ function HexFrameAvatar({
   );
 }
 
-function SegTab({
-  items,
-  value,
-  onChange,
-  className = "",
-}: {
-  items: { key: string; label: string }[];
-  value: string;
-  onChange: (v: string) => void;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`grid grid-cols-2 bg-black/40 rounded-md border border-white/15 overflow-hidden ${className}`}
-    >
-      {items.map(({ key, label }) => {
-        const active = key === value;
-        return (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            className={`h-8 text-[12px] font-heading tracking-wider ${
-              active ? "bg-red-600" : "bg-transparent"
-            }`}
-          >
-            {label.toUpperCase()}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function LeaderboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<TimespanUI>("All Time");
@@ -171,77 +134,44 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const searchParams = useSearchParams();
   const { user, isLoading, checkAuth } = useAuthStore();
   const isLoggedIn = !!user;
+
+  const REGION_CODE = "MY";
+  const REGION_LABEL = "Malaysia";
 
   useEffect(() => {
     checkAuth({ allowRefresh: false });
   }, []);
 
-  const homeRegionCode = useMemo(() => {
-    if (user?.country) return user.country.toUpperCase();
-    const fromUrl = (searchParams.get("region") || "").toUpperCase();
-    if (fromUrl && fromUrl !== "GLOBAL") return fromUrl;
-    if (typeof window !== "undefined") {
-      const ls = (localStorage.getItem("guestRegion") || "").toUpperCase();
-      if (ls) return ls;
-    }
-    return "MY";
-  }, [user?.country, searchParams]);
-
-  const [regionCode, setRegionCode] = useState<string>(homeRegionCode);
-  useEffect(() => setRegionCode(homeRegionCode), [homeRegionCode]);
-
-  const regionIsGlobal = regionCode === "GLOBAL";
-  const homeRegionLabel = useMemo(
-    () => codeToLabel(homeRegionCode) || homeRegionCode,
-    [homeRegionCode]
-  );
-
-  const segItems = useMemo(
-    () => [
-      { key: "region", label: homeRegionLabel },
-      { key: "global", label: "Global" },
-    ],
-    [homeRegionLabel]
-  );
-  const segValue = regionIsGlobal ? "global" : "region";
-  const onChangeSeg = (k: string) =>
-    setRegionCode(k === "global" ? "GLOBAL" : homeRegionCode);
-
   useEffect(() => {
     const ctrl = new AbortController();
-    const load = async () => {
+    (async () => {
       setLoading(true);
       setErrorMsg(null);
       try {
-        const params: Record<string, string | number> = {
-          timespan: TIMESPAN_TO_QUERY[period],
-          page: 1,
-          limit: 10,
-        };
-        if (!regionIsGlobal) params.region = regionCode;
-
         const { data } = await api.get<LeaderboardResponse>("/leaderboard", {
-          params,
+          params: {
+            timespan: TIMESPAN_TO_QUERY[period],
+            page: 1,
+            limit: 10,
+            region: REGION_CODE,
+          },
           signal: ctrl.signal,
           _skipAuthRefresh: true,
         });
         setRows(data.leaderboard);
       } catch (err: unknown) {
         if (isAxiosError(err) && err.code === "ERR_CANCELED") return;
-        const msg = isAxiosError(err)
-          ? err.message
-          : "Failed to load leaderboard.";
-        setErrorMsg(msg);
+        setErrorMsg(
+          isAxiosError(err) ? err.message : "Failed to load leaderboard."
+        );
       } finally {
         setLoading(false);
       }
-    };
-    load();
+    })();
     return () => ctrl.abort();
-  }, [regionCode, regionIsGlobal, period]);
+  }, [period]);
 
   const podium = useMemo(() => rows.slice(0, 3), [rows]);
   const tableRows = useMemo(
@@ -265,7 +195,7 @@ export default function LeaderboardPage() {
   ];
   const menuItems = isLoading ? [] : isLoggedIn ? authMenu : guestMenu;
 
-  const shareRegionLabel = regionIsGlobal ? "Global" : homeRegionLabel;
+  const shareRegionLabel = REGION_LABEL;
 
   const shareRef = useRef<HTMLDivElement>(null);
   const handleShare = async () => {
@@ -335,12 +265,14 @@ export default function LeaderboardPage() {
           LEADERBOARD
         </h1>
 
-        <SegTab
-          items={segItems}
-          value={segValue}
-          onChange={onChangeSeg}
-          className="w-[320px] mx-auto"
-        />
+        <div className="w-[320px] mx-auto mt-1">
+          <div
+            className="h-8 rounded-md bg-red-600 grid place-items-center
+                  font-heading text-[12px] tracking-wider"
+          >
+            {REGION_LABEL.toUpperCase()}
+          </div>
+        </div>
 
         <div className="grid grid-cols-3 gap-2 w-[320px] mx-auto mt-2">
           {(["All Time", "Weekly", "Top Streak"] as const).map((it) => {

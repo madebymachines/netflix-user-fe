@@ -10,16 +10,9 @@ import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
 
-/** ====== Master negara & dial code ====== */
-const COUNTRIES = [
-  { code: "MY", label: "Malaysia" },
-  { code: "SG", label: "Singapore" },
-  { code: "TH", label: "Thailand" },
-];
+const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
 const COUNTRY_DIAL: Record<string, string> = {
   MY: "+60",
-  SG: "+65",
-  TH: "+66",
 };
 const DEFAULT_CODE = "MY";
 const codeToLabel = (code?: string | null) =>

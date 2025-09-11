@@ -11,11 +11,7 @@ import CountryPill from "@/components/CountryPill";
 import OverlayMenu from "@/components/OverlayMenu";
 import { useRouter } from "next/navigation";
 
-const COUNTRIES = [
-  { code: "MY", label: "Malaysia" },
-  { code: "SG", label: "Singapore" },
-  { code: "TH", label: "Thailand" },
-];
+const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
 
 const CONTENT_H = 590; // tinggi stage hero (tetap)
 const BALL_H = 420; // tinggi background bola (tetap)
