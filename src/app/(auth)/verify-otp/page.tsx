@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,6 +26,7 @@ export default function VerifyOtpPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const CONTENT_H = 590;
 
   const router = useRouter();
@@ -54,6 +56,11 @@ export default function VerifyOtpPage() {
     { label: "Leaderboard", href: "/leaderboard" },
   ];
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  };
+
   const showToastThenRedirect = (msg: string) => {
     setToast(msg);
     setTimeout(() => {
@@ -77,6 +84,24 @@ export default function VerifyOtpPage() {
       } else {
         setApiError("An unexpected error occurred. Please try again.");
       }
+    }
+  };
+
+  const onResend = async () => {
+    try {
+      setResending(true);
+      await axios.post(
+        process.env.NEXT_PUBLIC_API_URL + "/auth/resend-verification-email",
+        { email }
+      );
+      showToast("Verification code resent to your email.");
+    } catch (error) {
+      const msg = axios.isAxiosError<ApiErrorResponse>(error)
+        ? error.response?.data?.message || error.message
+        : "Failed to resend code. Try again.";
+      showToast(msg);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -113,7 +138,7 @@ export default function VerifyOtpPage() {
 
         <p className="text-center text-[12px] leading-snug opacity-90 mb-6">
           We have sent you an OTP via Email, to{" "}
-          <span className="font-semibold underline">{email}</span> check your
+          <span className="font-semibold underline">{email}</span>. Check your
           inbox &amp; spam folder and enter the code below.
         </p>
 
@@ -135,10 +160,11 @@ export default function VerifyOtpPage() {
             Did not receive the OTP?{" "}
             <button
               type="button"
-              onClick={() => alert("Resend code")}
-              className="underline"
+              onClick={onResend}
+              disabled={resending}
+              className="underline disabled:opacity-50"
             >
-              Resend Code
+              {resending ? "Resending..." : "Resend Code"}
             </button>
           </div>
 
