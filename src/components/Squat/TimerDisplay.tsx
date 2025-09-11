@@ -8,7 +8,7 @@ interface TimerProps {
 // Timer Display Components
 export const HydrateTimer: React.FC<TimerProps> = ({ timeRemaining }) => {
   return (
-    <div className="mx-4">
+    <div className="mx-4 -mt-2">
       <div className="flex items-center justify-end gap-2">
         <div className="text-white text-right mr-3">
           <div className="text-[20px] text-white font-vancouver font-regular">YOUR FIRST SET</div>
@@ -22,7 +22,7 @@ export const HydrateTimer: React.FC<TimerProps> = ({ timeRemaining }) => {
 
 export const RecoveryTimer: React.FC<TimerProps> = ({ timeRemaining }) => {
   return (
-    <div className="mx-4">
+    <div className="mx-4 -mt-2">
       <div className="flex items-center justify-end gap-2">
         <div className="text-white text-right mr-3">
           <div className="text-[20px] text-white font-vancouver font-regular">YOUR 2nd SET</div>
@@ -36,7 +36,7 @@ export const RecoveryTimer: React.FC<TimerProps> = ({ timeRemaining }) => {
 
 export const ExerciseTimer: React.FC<TimerProps> = ({ timeRemaining }) => {
   return (
-    <div className="mx-4">
+    <div className="mx-4 -mt-2">
       <div className="flex items-center justify-end gap-2">
         <div className="text-white text-right mr-3">
           <div className="text-[20px] text-white font-vancouver font-regular">TIME</div>
