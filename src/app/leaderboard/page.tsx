@@ -1,9 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
 import OverlayMenu from "@/components/OverlayMenu";
@@ -11,13 +9,6 @@ import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 import * as htmlToImage from "html-to-image";
-
-const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
-
-const codeToLabel = (code?: string | null) =>
-  COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label ??
-  code ??
-  "";
 
 type TimespanUI = "All Time" | "Weekly" | "Top Streak";
 const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "weekly" | "streak"> = {
@@ -31,6 +22,7 @@ type Row = {
   username: string;
   profilePictureUrl: string | null;
   points: number;
+  gender?: "MALE" | "FEMALE";
 };
 
 type LeaderboardResponse = {
@@ -43,12 +35,45 @@ type LeaderboardResponse = {
   leaderboard: Row[];
 };
 
+// ---------------- Helpers ----------------
 function frameForPoints(points: number | null | undefined): string {
   const p = Math.max(0, Number(points ?? 0));
   if (p >= 6000) return "/images/f_legendary.png";
   if (p >= 3000) return "/images/f_warrior.png";
   if (p >= 1000) return "/images/f_challenger.png";
   return "/images/f_rookie.png";
+}
+
+// deteksi iOS
+const isIOS =
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && "ontouchend" in document));
+
+// proxy url eksternal supaya aman
+function proxiedSrc(src?: string | null): string {
+  if (!src) return "";
+  if (src.startsWith("/") || src.startsWith(window.location.origin)) return src;
+  return `/api/img?u=${encodeURIComponent(src)}`;
+}
+
+// komponen Img aman untuk share
+function Img({
+  src,
+  alt,
+  ...rest
+}: { src: string; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <img
+      {...rest}
+      src={proxiedSrc(src)}
+      alt={alt}
+      crossOrigin="anonymous"
+      loading="eager"
+      referrerPolicy="no-referrer"
+      style={{ display: "block", ...(rest.style || {}) }}
+    />
+  );
 }
 
 function HexFrameAvatar({
@@ -58,6 +83,7 @@ function HexFrameAvatar({
   rankBadge,
   gender,
   className = "",
+  forShare = false,
 }: {
   size?: number;
   src?: string | null;
@@ -65,22 +91,23 @@ function HexFrameAvatar({
   rankBadge?: 1 | 2 | 3;
   gender?: "MALE" | "FEMALE";
   className?: string;
+  forShare?: boolean;
 }) {
   const HEX = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
   const inset = Math.round(size * 0.16);
   const frameSrc = frameForPoints(points);
-
   const genderPlaceholder =
     gender === "FEMALE"
       ? "/images/placeholder_female.png"
       : "/images/placeholder_male.png";
+  const photoSrc = src || genderPlaceholder;
 
   return (
     <div
       className={`relative inline-block ${className}`}
       style={{ width: size, height: size }}
     >
-      {/* Foto ter-clip */}
+      {/* Foto */}
       <div
         className="absolute inset-0"
         style={{ clipPath: HEX, padding: inset, boxSizing: "border-box" }}
@@ -89,44 +116,98 @@ function HexFrameAvatar({
           className="w-full h-full relative overflow-hidden"
           style={{ clipPath: HEX }}
         >
-          <Image
-            src={src || genderPlaceholder}
-            alt="avatar"
-            fill
-            sizes={`${size}px`}
-            style={{ objectFit: "cover" }}
-            priority={false}
-          />
+          {forShare ? (
+            <Img
+              src={photoSrc}
+              alt="avatar"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <Image
+              src={photoSrc}
+              alt="avatar"
+              fill
+              sizes={`${size}px`}
+              style={{ objectFit: "cover" }}
+            />
+          )}
         </div>
       </div>
 
       {/* Frame */}
-      <Image
-        src={frameSrc}
-        alt="frame"
-        fill
-        sizes={`${size}px`}
-        style={{ objectFit: "contain", pointerEvents: "none" }}
-        priority={false}
-      />
+      {forShare ? (
+        <Img
+          src={frameSrc}
+          alt="frame"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      ) : (
+        <Image
+          src={frameSrc}
+          alt="frame"
+          fill
+          sizes={`${size}px`}
+          style={{ objectFit: "contain" }}
+        />
+      )}
 
-      {/* Badge rank */}
+      {/* Badge */}
       {rankBadge && (
         <div className="absolute -bottom-2 -left-2">
-          <Image
-            src={`/images/${rankBadge}.png`}
-            alt={`rank-${rankBadge}`}
-            width={28}
-            height={28}
-            style={{ objectFit: "contain" }}
-            priority={false}
-          />
+          {forShare ? (
+            <Img
+              src={`/images/${rankBadge}.png`}
+              alt={`rank-${rankBadge}`}
+              width={28}
+              height={28}
+              style={{ objectFit: "contain" }}
+            />
+          ) : (
+            <Image
+              src={`/images/${rankBadge}.png`}
+              alt={`rank-${rankBadge}`}
+              width={28}
+              height={28}
+              style={{ objectFit: "contain" }}
+            />
+          )}
         </div>
       )}
     </div>
   );
 }
 
+// tunggu semua gambar selesai load
+function waitForImages(root: HTMLElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll("img"));
+  const pending = imgs
+    .filter((img) => !img.complete)
+    .map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
+        })
+    );
+  return Promise.all(pending).then(() => undefined);
+}
+
+// cek dukungan share file
+function canNativeShareFiles(files: File[]): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & {
+    canShare?: (data?: ShareData) => boolean;
+  };
+  return typeof nav.canShare === "function" ? nav.canShare({ files }) : false;
+}
+
+// ---------------- Main Component ----------------
 export default function LeaderboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<TimespanUI>("All Time");
@@ -161,7 +242,7 @@ export default function LeaderboardPage() {
           _skipAuthRefresh: true,
         });
         setRows(data.leaderboard);
-      } catch (err: unknown) {
+      } catch (err) {
         if (isAxiosError(err) && err.code === "ERR_CANCELED") return;
         setErrorMsg(
           isAxiosError(err) ? err.message : "Failed to load leaderboard."
@@ -195,33 +276,40 @@ export default function LeaderboardPage() {
   ];
   const menuItems = isLoading ? [] : isLoggedIn ? authMenu : guestMenu;
 
-  const shareRegionLabel = REGION_LABEL;
-
   const shareRef = useRef<HTMLDivElement>(null);
+
   const handleShare = async () => {
     const node = shareRef.current;
     if (!node) return;
     try {
+      await waitForImages(node);
+      const pxRatio = isIOS ? 2 : 3;
+
       const dataUrl = await htmlToImage.toPng(node, {
-        pixelRatio: 3,
+        pixelRatio: pxRatio,
         backgroundColor: "#000000",
-        skipFonts: false,
         cacheBust: true,
       });
+
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File(
         [blob],
-        `leaderboard-${shareRegionLabel}-${period}.png`,
+        `leaderboard-${REGION_LABEL}-${period}.png`,
         { type: "image/png" }
       );
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: "Leaderboard",
-          text: `Physical Asia – ${shareRegionLabel} • ${period}`,
-          files: [file],
-        });
+      const shareData: ShareData = {
+        title: "Leaderboard",
+        text: `Physical Asia – ${REGION_LABEL} • ${period}`,
+        files: [file],
+      };
+
+      if (
+        canNativeShareFiles([file]) &&
+        typeof navigator.share === "function"
+      ) {
+        await navigator.share(shareData);
         return;
       }
 
@@ -233,8 +321,9 @@ export default function LeaderboardPage() {
       a.remove();
       alert("Gambar sudah diunduh. Upload manual ke Instagram/TikTok ya 👍");
     } catch (e) {
-      console.error(e);
-      alert("Gagal membuat gambar untuk dibagikan.");
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("share error:", e);
+      alert("Gagal membuat gambar untuk dibagikan.\n" + msg);
     }
   };
 
@@ -242,7 +331,6 @@ export default function LeaderboardPage() {
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
-      {/* BG */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -258,7 +346,7 @@ export default function LeaderboardPage() {
 
       <div ref={shareRef} className="relative z-10 w-full text-white px-4 pb-6">
         <div className="w-full flex justify-center pt-2">
-          <Image src="/images/logo2.png" alt="unlock" width={205} height={73} />
+          <Img src="/images/logo2.png" alt="unlock" width={205} height={73} />
         </div>
 
         <h1 className="mt-4 text-center font-semibold text-red-500 text-[20px] tracking-widest">
@@ -266,14 +354,12 @@ export default function LeaderboardPage() {
         </h1>
 
         <div className="w-[320px] mx-auto mt-1">
-          <div
-            className="h-8 rounded-md bg-red-600 grid place-items-center
-                  font-heading text-[12px] tracking-wider"
-          >
+          <div className="h-8 rounded-md bg-red-600 grid place-items-center font-heading text-[12px] tracking-wider">
             {REGION_LABEL.toUpperCase()}
           </div>
         </div>
 
+        {/* Filter tombol */}
         <div className="grid grid-cols-3 gap-2 w-[320px] mx-auto mt-2">
           {(["All Time", "Weekly", "Top Streak"] as const).map((it) => {
             const active = period === it;
@@ -314,9 +400,11 @@ export default function LeaderboardPage() {
                 >
                   <HexFrameAvatar
                     size={size}
-                    src={p?.profilePictureUrl || null}
+                    src={p?.profilePictureUrl}
                     points={pts}
                     rankBadge={rank}
+                    gender={p?.gender}
+                    forShare
                   />
                   <div
                     className={`text-[10px] ${
@@ -333,7 +421,7 @@ export default function LeaderboardPage() {
             })}
           </div>
 
-          {/* Table */}
+          {/* Tabel */}
           <div className="mt-6 rounded-md overflow-hidden border border-white/10">
             <div className="grid grid-cols-[40px_1fr_70px] bg-black/60 text-[10px] uppercase tracking-widest px-2 py-2">
               <div>Rank</div>
