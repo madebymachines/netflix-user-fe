@@ -57,7 +57,10 @@ const registerSchema = z
     username: z.string().min(1, "Username is required"),
     email: z.string().email("Invalid email address"),
     gender: z.enum(["MALE", "FEMALE"]),
-    phoneNumber: z.string().optional(),
+    phoneNumber: z
+      .string()
+      .regex(/^\d{7,9}$/, "Phone number must be 7–9 digits")
+      .optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
     agree: z.boolean().refine((val) => val === true, {
@@ -357,7 +360,9 @@ export default function RegisterPage() {
               </span>
               <input
                 {...register("phoneNumber")}
-                inputMode="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={9}
                 className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
                 placeholder="Enter your phone number"
               />
