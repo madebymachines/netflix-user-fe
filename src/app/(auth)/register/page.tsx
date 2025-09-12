@@ -84,24 +84,19 @@ function extractServerErrors<TFields>(
   };
 
   if (!payload) return result;
-
-  // string payload
   if (typeof payload === "string") {
     result.formMessage = payload;
     if (mapKnown) result.fieldErrors.push(...mapKnown(payload));
     return result;
   }
-
   if (!isRecord(payload)) return result;
 
-  // generic message
   const msg = typeof payload.message === "string" ? payload.message : undefined;
   if (msg) {
     result.formMessage = msg;
     if (mapKnown) result.fieldErrors.push(...mapKnown(msg));
   }
 
-  // Joi / Celebrate
   if (isJoiDetailArray(payload.details)) {
     payload.details.forEach((e) => {
       const pathRaw = Array.isArray(e.path) ? e.path[0] : e.path;
@@ -117,7 +112,6 @@ function extractServerErrors<TFields>(
     }
   }
 
-  // express-validator style
   if (isValidatorErrArray(payload.errors)) {
     payload.errors.forEach((e) => {
       const p = e.path || e.param || e.field;
@@ -147,10 +141,11 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const API_BASE = "/api/v1";
+  const DRAFT_KEY = "registerDraft:v1";
 
   useEffect(() => {
     try {
-      const c = (localStorage.getItem("guestRegion") || "").toUpperCase();
+      const c = (sessionStorage.getItem("guestRegion") || "").toUpperCase();
       setCountry(c || null);
     } catch {
       setCountry(null);
@@ -163,6 +158,7 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
     watch,
     setError,
+    reset,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
     defaultValues: { agree: false, gender: "MALE" },
@@ -170,6 +166,47 @@ export default function RegisterPage() {
   });
 
   const agreeChecked = watch("agree", false);
+
+  // Restore draft
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as Partial<RegisterFormInputs>;
+        reset({ agree: false, gender: "MALE", ...draft });
+      }
+    } catch {}
+  }, [reset]);
+
+  // Save draft
+  useEffect(() => {
+    const sub = watch((value) => {
+      const {
+        name,
+        username,
+        email,
+        gender,
+        phoneNumber,
+        password,
+        confirmPassword,
+        agree,
+      } = value as RegisterFormInputs;
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          name,
+          username,
+          email,
+          gender,
+          phoneNumber,
+          password,
+          confirmPassword,
+          agree,
+        })
+      );
+    });
+    return () => sub.unsubscribe();
+  }, [watch]);
 
   const usingCountryLabel = useMemo(() => {
     const label = codeToLabel(country);
@@ -213,10 +250,10 @@ export default function RegisterPage() {
         country: countryCode,
       });
 
+      sessionStorage.removeItem(DRAFT_KEY); // hapus draft setelah sukses
       router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        // aman kalau server balas HTML 404 dari FE
         const ct = err.response?.headers?.["content-type"] as
           | string
           | undefined;
@@ -254,6 +291,7 @@ export default function RegisterPage() {
       }
     }
   };
+
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}

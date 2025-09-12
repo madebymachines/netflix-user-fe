@@ -34,15 +34,17 @@ export default function LandingPage() {
 
   useEffect(() => {
     const saved =
-      typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+      typeof window !== "undefined"
+        ? sessionStorage.getItem(STORAGE_KEY)
+        : null;
     if (saved) setCountry(saved);
   }, []);
 
   const onCountryChange = (val: string | null) => {
     setCountry(val);
     if (typeof window === "undefined") return;
-    if (val) localStorage.setItem(STORAGE_KEY, val);
-    else localStorage.removeItem(STORAGE_KEY);
+    if (val) sessionStorage.setItem(STORAGE_KEY, val);
+    else sessionStorage.removeItem(STORAGE_KEY);
   };
 
   useEffect(() => {
