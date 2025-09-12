@@ -1,37 +1,60 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import axios from "axios";
-import MobileShell from "@/components/MobileShell";
-import Header from "@/components/Header";
-import OverlayMenu from "@/components/OverlayMenu";
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import axios, { AxiosError } from 'axios'
+import MobileShell from '@/components/MobileShell'
+import Header from '@/components/Header'
+import OverlayMenu from '@/components/OverlayMenu'
+
+const API_BASE = '/api/v1'
 
 const otpSchema = z.object({
-  otp: z.string().length(6, "OTP must be 6 digits"),
-});
+  otp: z
+    .string()
+    .length(6, 'OTP must be at least 6 digits')
+    .regex(/^\d+$/, 'OTP must be digits'),
+})
 
-type OtpFormInputs = z.infer<typeof otpSchema>;
+type OtpFormInputs = z.infer<typeof otpSchema>
 
-interface ApiErrorResponse {
-  message: string;
+type ApiErrorResponse = { message?: string }
+type FieldErr<T> = { path: keyof T; message: string }
+
+// pesan aman kalau server tak sengaja balas HTML (mis-route ke FE)
+function safeAxiosMessage(err: AxiosError<unknown>): string {
+  const ct =
+    (err.response?.headers?.['content-type'] as string | undefined) || ''
+  const data = err.response?.data
+  const looksHtml =
+    (typeof data === 'string' && /<\s*html|<!doctype/i.test(data)) ||
+    ct.includes('text/html')
+  if (looksHtml) {
+    const code = err.response?.status
+    const txt = err.response?.statusText || 'Request failed'
+    return code ? `${code} ${txt}` : txt
+  }
+  if (typeof data === 'string') return data
+  if ((data as ApiErrorResponse)?.message)
+    return (data as ApiErrorResponse).message as string
+  return err.message || 'Request failed'
 }
 
 export default function VerifyOtpPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-  const CONTENT_H = 590;
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+  const CONTENT_H = 590
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const email = searchParams.get('email') || ''
 
   const {
     register,
@@ -39,71 +62,72 @@ export default function VerifyOtpPage() {
     formState: { errors, isValid },
   } = useForm<OtpFormInputs>({
     resolver: zodResolver(otpSchema),
-    mode: "onChange",
-  });
+    mode: 'onChange',
+  })
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = "hidden";
+    const prev = document.body.style.overflow
+    if (menuOpen) document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuOpen]);
+      document.body.style.overflow = prev
+    }
+  }, [menuOpen])
 
   const guestMenu = [
-    { label: "Home", href: "/" },
-    { label: "Sign In", href: "/sign-in" },
-    { label: "Leaderboard", href: "/leaderboard" },
-  ];
+    { label: 'Home', href: '/' },
+    { label: 'Sign In', href: '/sign-in' },
+    { label: 'Leaderboard', href: '/leaderboard' },
+  ]
 
   const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2000);
-  };
+    setToast(msg)
+    setTimeout(() => setToast(null), 2000)
+  }
 
   const showToastThenRedirect = (msg: string) => {
-    setToast(msg);
+    setToast(msg)
     setTimeout(() => {
-      setToast(null);
-      router.push("/sign-in");
-    }, 2000);
-  };
+      setToast(null)
+      router.push('/sign-in')
+    }, 1500)
+  }
 
   const onSubmit: SubmitHandler<OtpFormInputs> = async (data) => {
-    if (!isValid) return;
-    setApiError(null);
+    if (!isValid) return
+    setApiError(null)
     try {
-      await axios.post(process.env.NEXT_PUBLIC_API_URL + "/auth/verify-email", {
+      await axios.post<ApiErrorResponse>(`${API_BASE}/auth/verify-email`, {
         email,
         otp: data.otp,
-      });
-      showToastThenRedirect("Verification successful! You can now log in.");
-    } catch (error) {
-      if (axios.isAxiosError<ApiErrorResponse>(error)) {
-        setApiError(error.response?.data?.message || "Verification failed");
+      })
+      showToastThenRedirect('Verification successful! You can now log in.')
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setApiError(safeAxiosMessage(err))
       } else {
-        setApiError("An unexpected error occurred. Please try again.");
+        setApiError('An unexpected error occurred. Please try again.')
       }
     }
-  };
+  }
 
   const onResend = async () => {
     try {
-      setResending(true);
-      await axios.post(
-        process.env.NEXT_PUBLIC_API_URL + "/auth/resend-verification-email",
+      setResending(true)
+      await axios.post<ApiErrorResponse>(
+        `${API_BASE}/auth/resend-verification-email`,
         { email }
-      );
-      showToast("Verification code resent to your email.");
-    } catch (error) {
-      const msg = axios.isAxiosError<ApiErrorResponse>(error)
-        ? error.response?.data?.message || error.message
-        : "Failed to resend code. Try again.";
-      showToast(msg);
+      )
+      showToast('Verification code resent to your email.')
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        showToast(safeAxiosMessage(err))
+      } else {
+        showToast('Failed to resend code. Try again.')
+      }
     } finally {
-      setResending(false);
+      setResending(false)
     }
-  };
+  }
 
   return (
     <MobileShell
@@ -123,8 +147,8 @@ export default function VerifyOtpPage() {
           src="/images/ball.png"
           alt=""
           fill
-          sizes="100vs"
-          style={{ objectFit: "cover", objectPosition: "top" }}
+          sizes="100vw"
+          style={{ objectFit: 'cover', objectPosition: 'top' }}
           className="opacity-25"
           priority
         />
@@ -137,14 +161,14 @@ export default function VerifyOtpPage() {
         </h1>
 
         <p className="text-center text-[12px] leading-snug opacity-90 mb-6">
-          We have sent you an OTP via Email, to{" "}
+          We have sent you an OTP via Email, to{' '}
           <span className="font-semibold underline">{email}</span>. Check your
           inbox &amp; spam folder and enter the code below.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <input
-            {...register("otp")}
+            {...register('otp')}
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={6}
@@ -157,14 +181,14 @@ export default function VerifyOtpPage() {
           )}
 
           <div className="text-[12px]">
-            Did not receive the OTP?{" "}
+            Did not receive the OTP?{' '}
             <button
               type="button"
               onClick={onResend}
               disabled={resending}
               className="underline disabled:opacity-50"
             >
-              {resending ? "Resending..." : "Resend Code"}
+              {resending ? 'Resending...' : 'Resend Code'}
             </button>
           </div>
 
@@ -180,8 +204,8 @@ export default function VerifyOtpPage() {
             className={`w-full rounded-md py-3 font-bold transition
               ${
                 isValid
-                  ? "bg-white text-black"
-                  : "bg-white/20 text-white/60 cursor-not-allowed"
+                  ? 'bg-white text-black'
+                  : 'bg-white/20 text-white/60 cursor-not-allowed'
               }`}
           >
             Verify
@@ -203,5 +227,5 @@ export default function VerifyOtpPage() {
         contentHeight={CONTENT_H}
       />
     </MobileShell>
-  );
+  )
 }
