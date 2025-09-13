@@ -23,6 +23,7 @@ type Row = {
   username: string;
   profilePictureUrl: string | null;
   points: number;
+  streak?: number;
   gender?: "MALE" | "FEMALE";
 };
 
@@ -334,6 +335,9 @@ export default function LeaderboardPage() {
   const REGION_CODE = "MY";
   const REGION_LABEL = "Malaysia";
 
+  const getScore = (r?: Row) =>
+    period === "Top Streak" ? Number(r?.streak ?? 0) : Number(r?.points ?? 0);
+
   useEffect(() => {
     checkAuth({ allowRefresh: false });
   }, []);
@@ -534,8 +538,7 @@ export default function LeaderboardPage() {
               const size = idx === 1 ? 92 : 82;
               const rank = (idx === 1 ? 1 : idx === 0 ? 2 : 3) as 1 | 2 | 3;
               const shiftY = idx === 1 ? -12 : 20;
-              const pts = p?.points ?? 0;
-
+              const display = getScore(p);
               return (
                 <div
                   key={rank}
@@ -545,7 +548,7 @@ export default function LeaderboardPage() {
                   <HexFrameAvatar
                     size={size}
                     src={p?.profilePictureUrl}
-                    points={pts}
+                    points={p?.points ?? 0}
                     rankBadge={rank}
                     gender={p?.gender}
                     forShare
@@ -558,7 +561,7 @@ export default function LeaderboardPage() {
                     @{p?.username ?? "-"}
                   </div>
                   <div className="text-[10px] opacity-90">
-                    {pts.toLocaleString("id-ID")}
+                    {display.toLocaleString("id-ID")}
                   </div>
                 </div>
               );
@@ -588,7 +591,7 @@ export default function LeaderboardPage() {
                       @{r.username}
                     </div>
                     <div className="text-right pr-1">
-                      {(r?.points ?? 0).toLocaleString("id-ID")}
+                      {getScore(r).toLocaleString("id-ID")}
                     </div>
                   </div>
                 ))
