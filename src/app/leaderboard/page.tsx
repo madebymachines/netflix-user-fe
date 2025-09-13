@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useId } from "react";
 import Image from "next/image";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
@@ -10,6 +10,7 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 import * as htmlToImage from "html-to-image";
 
+// ---------------- Types ----------------
 type TimespanUI = "All Time" | "Weekly" | "Top Streak";
 const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "weekly" | "streak"> = {
   "All Time": "alltime",
@@ -48,32 +49,97 @@ function frameForPoints(points: number | null | undefined): string {
 const isIOS =
   typeof navigator !== "undefined" &&
   (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && "ontouchend" in document));
+    (navigator.platform === "MacIntel" &&
+      typeof document !== "undefined" &&
+      "ontouchend" in document));
 
-// proxy url eksternal supaya aman
+// SVG placeholder inline (last resort)
+const FALLBACK_DATA_URI =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+       <rect width="100%" height="100%" fill="black"/>
+       <circle cx="100" cy="80" r="40" fill="#222"/>
+       <rect x="50" y="130" width="100" height="40" rx="8" fill="#222"/>
+     </svg>`
+  );
+
+// proxy url eksternal supaya aman untuk html-to-image
 function proxiedSrc(src?: string | null): string {
   if (!src) return "";
-  if (src.startsWith("/") || src.startsWith(window.location.origin)) return src;
+  if (typeof window !== "undefined") {
+    if (src.startsWith("/") || src.startsWith(window.location.origin))
+      return src;
+  } else if (src.startsWith("/")) return src;
   return `/api/img?u=${encodeURIComponent(src)}`;
 }
 
-// komponen Img aman untuk share
-function Img({
+// <img> aman dengan fallback berantai (external → placeholder lokal → SVG inline)
+function SafeImg({
   src,
   alt,
+  fallbackLocal = "/images/placeholder_male.png",
   ...rest
-}: { src: string; alt: string } & React.ImgHTMLAttributes<HTMLImageElement>) {
+}: {
+  src: string;
+  alt: string;
+  fallbackLocal?: string;
+} & React.ImgHTMLAttributes<HTMLImageElement>) {
   return (
     <img
       {...rest}
       src={proxiedSrc(src)}
       alt={alt}
-      crossOrigin="anonymous"
-      loading="eager"
       referrerPolicy="no-referrer"
+      loading="eager"
       style={{ display: "block", ...(rest.style || {}) }}
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (!img.src.includes(fallbackLocal)) {
+          img.src = fallbackLocal;
+        } else {
+          img.src = FALLBACK_DATA_URI;
+        }
+      }}
     />
   );
+}
+
+/** iOS: fetch -> dataURL supaya <svg><image> selalu berhasil dirender ke canvas */
+function useShareSrc(src?: string | null): string {
+  const [out, setOut] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!src) {
+        setOut("");
+        return;
+      }
+      const url = proxiedSrc(src);
+      if (!isIOS) {
+        setOut(url);
+        return;
+      }
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        const blob = await res.blob();
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onloadend = () => resolve(fr.result as string);
+          fr.onerror = reject;
+          fr.readAsDataURL(blob);
+        });
+        if (!cancelled) setOut(dataUrl);
+      } catch {
+        if (!cancelled) setOut(FALLBACK_DATA_URI);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+  return out;
 }
 
 function HexFrameAvatar({
@@ -102,41 +168,57 @@ function HexFrameAvatar({
       : "/images/placeholder_male.png";
   const photoSrc = src || genderPlaceholder;
 
-  return (
-    <div
-      className={`relative inline-block ${className}`}
-      style={{ width: size, height: size }}
-    >
-      {/* Foto */}
-      <div
-        className="absolute inset-0"
-        style={{ clipPath: HEX, padding: inset, boxSizing: "border-box" }}
-      >
-        <div
-          className="w-full h-full relative overflow-hidden"
-          style={{ clipPath: HEX }}
-        >
-          {forShare ? (
-            <Img
-              src={photoSrc}
-              alt="avatar"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <Image
-              src={photoSrc}
-              alt="avatar"
-              fill
-              sizes={`${size}px`}
-              style={{ objectFit: "cover" }}
-            />
-          )}
-        </div>
-      </div>
+  // ✅ Hooks dipanggil SELALU di top-level (tidak kondisional)
+  const rawId = useId();
+  const svgId = `hex-${rawId.replace(/:/g, "")}`;
+  // panggil hook-nya selalu; kalau tidak share, kirim null supaya efeknya tidak jalan
+  const sharePhotoUrl =
+    useShareSrc(forShare ? photoSrc : null) || genderPlaceholder;
 
-      {/* Frame */}
-      {forShare ? (
-        <Img
+  // ----- SHARE MODE (pakai SVG clipPath) -----
+  if (forShare) {
+    const inner = size - 2 * inset;
+    const x0 = inset;
+    const y0 = inset;
+    const pts = [
+      [0.5, 0],
+      [1, 0.25],
+      [1, 0.75],
+      [0.5, 1],
+      [0, 0.75],
+      [0, 0.25],
+    ]
+      .map(([fx, fy]) => `${x0 + fx * inner},${y0 + fy * inner}`)
+      .join(" ");
+
+    return (
+      <div
+        className={`relative inline-block ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          style={{ position: "absolute", left: 0, top: 0 }}
+        >
+          <defs>
+            <clipPath id={svgId}>
+              <polygon points={pts} />
+            </clipPath>
+          </defs>
+          <image
+            href={sharePhotoUrl}
+            x={x0}
+            y={y0}
+            width={inner}
+            height={inner}
+            preserveAspectRatio="xMidYMid slice"
+            clipPath={`url(#${svgId})`}
+          />
+        </svg>
+
+        <SafeImg
           src={frameSrc}
           alt="frame"
           style={{
@@ -147,43 +229,65 @@ function HexFrameAvatar({
             objectFit: "contain",
           }}
         />
-      ) : (
-        <Image
-          src={frameSrc}
-          alt="frame"
-          fill
-          sizes={`${size}px`}
-          style={{ objectFit: "contain" }}
-        />
-      )}
 
-      {/* Badge */}
+        {rankBadge && (
+          <div className="absolute -bottom-2 -left-2">
+            <SafeImg
+              src={`/images/${rankBadge}.png`}
+              alt={`rank-${rankBadge}`}
+              width={28}
+              height={28}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative inline-block ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ clipPath: HEX, padding: inset, boxSizing: "border-box" }}
+      >
+        <div
+          className="w-full h-full relative overflow-hidden"
+          style={{ clipPath: HEX }}
+        >
+          <Image
+            src={photoSrc}
+            alt="avatar"
+            fill
+            sizes={`${size}px`}
+            style={{ objectFit: "cover" }}
+          />
+        </div>
+      </div>
+      <Image
+        src={frameSrc}
+        alt="frame"
+        fill
+        sizes={`${size}px`}
+        style={{ objectFit: "contain" }}
+      />
       {rankBadge && (
         <div className="absolute -bottom-2 -left-2">
-          {forShare ? (
-            <Img
-              src={`/images/${rankBadge}.png`}
-              alt={`rank-${rankBadge}`}
-              width={28}
-              height={28}
-              style={{ objectFit: "contain" }}
-            />
-          ) : (
-            <Image
-              src={`/images/${rankBadge}.png`}
-              alt={`rank-${rankBadge}`}
-              width={28}
-              height={28}
-              style={{ objectFit: "contain" }}
-            />
-          )}
+          <Image
+            src={`/images/${rankBadge}.png`}
+            alt={`rank-${rankBadge}`}
+            width={28}
+            height={28}
+          />
         </div>
       )}
     </div>
   );
 }
 
-// tunggu semua gambar selesai load
+// tunggu semua <img> selesai load di dalam node
 function waitForImages(root: HTMLElement): Promise<void> {
   const imgs = Array.from(root.querySelectorAll("img"));
   const pending = imgs
@@ -205,6 +309,15 @@ function canNativeShareFiles(files: File[]): boolean {
     canShare?: (data?: ShareData) => boolean;
   };
   return typeof nav.canShare === "function" ? nav.canShare({ files }) : false;
+}
+
+function isShareAbort(err: unknown): boolean {
+  const e = err as { name?: string; message?: string };
+  const name = (e?.name || "").toLowerCase();
+  const msg = (e?.message || "").toLowerCase();
+  return (
+    name === "aborterror" || msg.includes("abort") || msg.includes("cancel")
+  );
 }
 
 // ---------------- Main Component ----------------
@@ -259,7 +372,6 @@ export default function LeaderboardPage() {
     () => (rows.length <= 3 ? rows.slice(0, 10) : rows.slice(3, 10)),
     [rows]
   );
-
   const isSelf = (u?: string | null) =>
     !!user?.username && !!u && u.toLowerCase() === user.username.toLowerCase();
 
@@ -281,6 +393,7 @@ export default function LeaderboardPage() {
   const handleShare = async () => {
     const node = shareRef.current;
     if (!node) return;
+
     try {
       await waitForImages(node);
       const pxRatio = isIOS ? 2 : 3;
@@ -305,11 +418,25 @@ export default function LeaderboardPage() {
         files: [file],
       };
 
-      if (
-        canNativeShareFiles([file]) &&
-        typeof navigator.share === "function"
-      ) {
-        await navigator.share(shareData);
+      const canShare =
+        canNativeShareFiles([file]) && typeof navigator.share === "function";
+
+      if (canShare) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          if (isShareAbort(err)) {
+            console.log("Share cancelled/taken over by target app.");
+            return;
+          }
+          console.error("Share failed:", err);
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = file.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
         return;
       }
 
@@ -319,11 +446,10 @@ export default function LeaderboardPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      alert("Gambar sudah diunduh. Upload manual ke Instagram/TikTok ya 👍");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("share error:", e);
-      alert("Gagal membuat gambar untuk dibagikan.\n" + msg);
+      alert("Unable to generate the image to share.\n" + msg);
     }
   };
 
@@ -331,6 +457,7 @@ export default function LeaderboardPage() {
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
+      {/* Background UI normal */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -344,9 +471,26 @@ export default function LeaderboardPage() {
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
+      {/* === Area yang akan di-capture === */}
       <div ref={shareRef} className="relative z-10 w-full text-white px-4 pb-6">
+        {/* BG khusus share agar ikut tertangkap */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <SafeImg
+            src="/images/ball.png"
+            alt=""
+            className="w-full h-full opacity-20"
+            style={{ objectFit: "cover", objectPosition: "top" }}
+          />
+          <div className="absolute inset-0 bg-black/30" />
+        </div>
+
         <div className="w-full flex justify-center pt-2">
-          <Img src="/images/logo2.png" alt="unlock" width={205} height={73} />
+          <SafeImg
+            src="/images/logo2.png"
+            alt="unlock"
+            width={205}
+            height={73}
+          />
         </div>
 
         <h1 className="mt-4 text-center font-semibold text-red-500 text-[20px] tracking-widest">
@@ -359,7 +503,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Filter tombol */}
+        {/* Filter */}
         <div className="grid grid-cols-3 gap-2 w-[320px] mx-auto mt-2">
           {(["All Time", "Weekly", "Top Streak"] as const).map((it) => {
             const active = period === it;
