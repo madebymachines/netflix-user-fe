@@ -323,24 +323,29 @@ export default function DashboardPage() {
             <div className="mt-1 flex justify-between">
               {/* Chart kiri */}
               <div className="w-[193px] h-[109px]">
-                <div className="flex items-end gap-[10px] h-[90px]">
+                <div className="grid grid-cols-7 items-end h-[90px]">
                   {barHeights.map((h, i) => {
                     const active = dayValues[i] > 0;
                     return (
                       <div
                         key={i}
-                        className="w-[14px] rounded-t-md transition-[height] duration-300"
-                        style={{
-                          height: h,
-                          background: active
-                            ? "linear-gradient(180deg,#ff3b3b,#a40012)"
-                            : "linear-gradient(180deg,#6a6a6a,#434343)",
-                        }}
-                        title={`${dayLabels[i]}: ${dayValues[i]}`}
-                      />
+                        className="flex items-end justify-center h-full"
+                      >
+                        <div
+                          className="w-[14px] rounded-t-md transition-[height] duration-300"
+                          style={{
+                            height: h,
+                            background: active
+                              ? "linear-gradient(180deg,#ff3b3b,#a40012)"
+                              : "linear-gradient(180deg,#6a6a6a,#434343)",
+                          }}
+                          title={`${dayLabels[i]}: ${dayValues[i]}`}
+                        />
+                      </div>
                     );
                   })}
                 </div>
+
                 <div className="mt-[6px] grid grid-cols-7 text-center text-[9px] opacity-90">
                   {dayLabels.map((d, idx) => (
                     <div key={idx}>{d[0]}</div>
