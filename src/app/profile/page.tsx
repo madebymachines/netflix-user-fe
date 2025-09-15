@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -15,8 +16,15 @@ type FormState = {
   fullName: string;
   username: string;
   email: string;
-  phone: string;
+  phoneDigits: string;
   gender: Gender;
+};
+
+const DIAL_CODE = "+60";
+const normalizeDigits = (raw?: string) => String(raw || "").replace(/\D+/g, "");
+const stripDialCode = (raw?: string) => {
+  const digits = normalizeDigits(raw);
+  return digits.startsWith("60") ? digits.slice(2) : digits;
 };
 
 const genderPlaceholder = (g?: "MALE" | "FEMALE" | "") =>
@@ -31,15 +39,23 @@ export default function ProfilePage() {
   const { user, isLoading, checkAuth } = useAuthStore();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // ==== Toast ====
-  const [toast, setToast] = useState<string | null>(null);
-  const showToastThenDashboard = (msg: string) => {
-    setToast(msg);
+  const [toast, setToast] = useState<{
+    msg: string;
+    type: "success" | "error";
+  } | null>(null);
+  const showToast = (
+    msg: string,
+    type: "success" | "error" = "success",
+    after?: () => void
+  ) => {
+    setToast({ msg, type });
     setTimeout(() => {
       setToast(null);
-      router.push("/dashboard");
-    }, 1500);
+      after?.();
+    }, 1800);
   };
+  const showToastThenDashboard = (msg: string) =>
+    showToast(msg, "success", () => router.push("/dashboard"));
 
   // ==== Avatar state ====
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -53,7 +69,7 @@ export default function ProfilePage() {
       fullName: user?.name ?? "",
       username: user?.username ?? "",
       email: user?.email ?? "",
-      phone: user?.phoneNumber ?? "",
+      phoneDigits: stripDialCode(user?.phoneNumber ?? ""),
       gender: (user?.gender as Gender) ?? "",
     }),
     [user]
@@ -77,16 +93,15 @@ export default function ProfilePage() {
   }, [avatarUrl]);
 
   const onPickAvatar = () => fileRef.current?.click();
-
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!/^image\//.test(f.type)) {
-      alert("File harus berupa gambar");
+      showToast("File harus berupa gambar", "error");
       return;
     }
     if (f.size > 5 * 1024 * 1024) {
-      alert("Maksimal ukuran 5MB");
+      showToast("Maksimal ukuran 5MB", "error");
       return;
     }
     const url = URL.createObjectURL(f);
@@ -99,7 +114,7 @@ export default function ProfilePage() {
 
   const uploadAvatar = async () => {
     if (!avatarFile) {
-      alert("Pilih gambar terlebih dahulu");
+      showToast("Pilih gambar terlebih dahulu", "error");
       return;
     }
     try {
@@ -116,19 +131,22 @@ export default function ProfilePage() {
       const msg = isAxiosError<{ message?: string }>(err)
         ? err.response?.data?.message || err.message
         : "Gagal upload foto.";
-      console.error(err);
-      alert(msg);
+      showToast(msg, "error");
     } finally {
       setIsUploadingPhoto(false);
     }
   };
 
-  const onCancel = () => {
-    router.push("/dashboard");
-  };
+  const onCancel = () => router.push("/dashboard");
 
   const onUpdate = async () => {
     if (!user) return;
+
+    if (form.phoneDigits && !/^\d{7,9}$/.test(form.phoneDigits)) {
+      showToast("Phone Number must be 7–9 digits", "error");
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const payload: {
@@ -140,8 +158,8 @@ export default function ProfilePage() {
         name: form.fullName.trim(),
         username: form.username.trim(),
       };
-      const phone = form.phone.trim();
-      if (phone) payload.phoneNumber = phone;
+      if (form.phoneDigits)
+        payload.phoneNumber = `${DIAL_CODE}${form.phoneDigits}`;
       if (form.gender) payload.gender = form.gender as "MALE" | "FEMALE";
 
       await api.put("/user/me", payload);
@@ -151,7 +169,7 @@ export default function ProfilePage() {
       const msg = isAxiosError<{ message?: string }>(error)
         ? error.response?.data?.message || error.message
         : "Failed to update profile.";
-      alert(msg);
+      showToast(msg, "error");
     } finally {
       setIsUpdating(false);
     }
@@ -176,7 +194,6 @@ export default function ProfilePage() {
   }
 
   const isBlobPreview = avatarUrl.startsWith("blob:");
-
   const effectiveGender = (form.gender ||
     (user?.gender as Gender) ||
     "") as Gender;
@@ -191,8 +208,14 @@ export default function ProfilePage() {
       {/* Toast */}
       {toast && (
         <div className="fixed z-50 left-1/2 top-4 -translate-x-1/2">
-          <div className="rounded-md bg-white text-black px-4 py-2 shadow-[0_10px_24px_rgba(0,0,0,.35)] font-semibold">
-            {toast}
+          <div
+            className={`rounded-md px-4 py-2 shadow-[0_10px_24px_rgba(0,0,0,.35)] font-semibold ${
+              toast.type === "error"
+                ? "bg-red-600 text-white"
+                : "bg-white text-black"
+            }`}
+          >
+            {toast.msg}
           </div>
         </div>
       )}
@@ -271,13 +294,13 @@ export default function ProfilePage() {
 
         {/* Form */}
         <div className="space-y-4">
-          <Field
+          <TextField
             label="Full Name"
             value={form.fullName}
             onChange={(v) => setForm((s) => ({ ...s, fullName: v }))}
             required
           />
-          <Field
+          <TextField
             label="Username"
             value={form.username}
             onChange={(v) => setForm((s) => ({ ...s, username: v }))}
@@ -300,7 +323,6 @@ export default function ProfilePage() {
                 />
                 <span>Male</span>
               </label>
-
               <label className="flex items-center gap-2 border-b border-white/30 pb-2">
                 <input
                   type="radio"
@@ -316,7 +338,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Field
+          <TextField
             label="Email"
             value={form.email}
             onChange={(v) => setForm((s) => ({ ...s, email: v }))}
@@ -324,11 +346,15 @@ export default function ProfilePage() {
             required
             disabled
           />
-          <Field
+
+          <PhoneField
             label="Phone Number"
-            value={form.phone}
-            onChange={(v) => setForm((s) => ({ ...s, phone: v }))}
-            placeholder="Optional"
+            dialCode={DIAL_CODE}
+            value={form.phoneDigits}
+            onChange={(digits) =>
+              setForm((s) => ({ ...s, phoneDigits: digits }))
+            }
+            required
           />
         </div>
 
@@ -358,7 +384,7 @@ export default function ProfilePage() {
   );
 }
 
-function Field({
+function TextField({
   label,
   value,
   onChange,
@@ -393,5 +419,49 @@ function Field({
         required={required}
       />
     </label>
+  );
+}
+
+function PhoneField({
+  label,
+  value,
+  onChange,
+  dialCode = "+60",
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (digits: string) => void;
+  dialCode?: string;
+  required?: boolean;
+}) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = normalizeDigits(e.target.value).slice(0, 9);
+    onChange(digits);
+  };
+
+  return (
+    <div>
+      <div className="text-[12px] mb-1 opacity-80">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
+          {dialCode}
+        </span>
+        <input
+          value={value}
+          onChange={handleChange}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={9}
+          className="flex-1 bg-transparent border-b border-white/30 px-0 py-2 placeholder-white/40
+                     focus:outline-none focus:border-white text-[14px]"
+          placeholder="Enter your phone number (7–9 digits)"
+          required={required}
+        />
+      </div>
+    </div>
   );
 }
