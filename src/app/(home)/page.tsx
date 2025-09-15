@@ -1,76 +1,45 @@
-// app/(whatever)/page.tsx  — LandingPage
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { ChevronsDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MobileShell from "@/components/MobileShell";
 import Header from "@/components/Header";
-import CountryPill from "@/components/CountryPill";
 import OverlayMenu from "@/components/OverlayMenu";
 import { useRouter } from "next/navigation";
 
-const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
-
-const CONTENT_H = 590; // tinggi stage hero (tetap)
-const BALL_H = 420; // tinggi background bola (tetap)
+const CONTENT_H = 590;
+const BALL_H = 420;
 const GAP_AFTER_BALL = 20;
 const BTN_H = 40;
 
-// ==== POSISI VERTIKAL TETAP (px) ====
-const LOGO_TOP = 120; // posisi logo
-const BOTTLE_TOP = 240; // posisi botol
+const LOGO_TOP = 120;
+const BOTTLE_TOP = 240;
 const SCROLL_CUE_TOP = BALL_H + GAP_AFTER_BALL + BTN_H + 10;
 
-const STORAGE_KEY = "guestRegion";
-
 export default function LandingPage() {
-  const [country, setCountry] = useState<string | null>(null);
-  const unlocked = !!country;
-
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const saved =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem(STORAGE_KEY)
-        : null;
-    if (saved) setCountry(saved);
-  }, []);
-
-  const onCountryChange = (val: string | null) => {
-    setCountry(val);
-    if (typeof window === "undefined") return;
-    if (val) sessionStorage.setItem(STORAGE_KEY, val);
-    else sessionStorage.removeItem(STORAGE_KEY);
-  };
-
-  useEffect(() => {
     const prev = document.body.style.overflow;
-    if (!unlocked || menuOpen) document.body.style.overflow = "hidden";
+    if (menuOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = prev || "";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [unlocked, menuOpen]);
+  }, [menuOpen]);
 
   const moreRef = useRef<HTMLDivElement | null>(null);
   const goMore = () => moreRef.current?.scrollIntoView({ behavior: "smooth" });
-
-  const leaderboardHref = useMemo(
-    () => `/leaderboard${country ? `?region=${country}` : ""}`,
-    [country]
-  );
 
   const menuItems = useMemo(
     () => [
       { label: "Home", href: "/" },
       { label: "Sign In", href: "/sign-in" },
-      { label: "Leaderboard", href: leaderboardHref },
+      { label: "Leaderboard", href: "/leaderboard" },
     ],
-    [leaderboardHref]
+    []
   );
 
   return (
@@ -78,21 +47,6 @@ export default function LandingPage() {
       <MobileShell
         header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
         contentHeight={CONTENT_H}
-        dimAll={!unlocked}
-        overlayChildren={
-          !unlocked ? (
-            <div className="relative h-full w-full">
-              <div className="absolute left-1/2 -translate-x-1/2 top-[62px] pointer-events-auto">
-                <CountryPill
-                  value={country}
-                  onChange={onCountryChange}
-                  options={COUNTRIES}
-                  placeholder="Select Country First"
-                />
-              </div>
-            </div>
-          ) : null
-        }
       >
         {/* BG bola (tinggi tetap) */}
         <div
@@ -111,29 +65,17 @@ export default function LandingPage() {
 
         {/* HERO content */}
         <div className="absolute inset-0 z-20">
-          {/* pill country saat sudah pilih */}
-          {unlocked && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-6 z-30">
-              <CountryPill
-                value={country}
-                onChange={onCountryChange}
-                options={COUNTRIES}
-                placeholder="Select Country"
-              />
-            </div>
-          )}
-
           {/* Logo: posisi Y tetap */}
           <div
             className="absolute left-1/2 -translate-x-1/2 z-20"
-            style={{ top: LOGO_TOP }}
+            style={{ top: LOGO_TOP, width: "310px", height: "100px" }}
           >
             <Image
               src="/images/logo2.png"
               alt="UNLOCK YOUR 100"
-              width={294}
-              height={105}
+              fill
               priority
+              style={{ objectFit: "contain" }}
             />
           </div>
 
@@ -158,13 +100,11 @@ export default function LandingPage() {
             style={{ top: BALL_H + GAP_AFTER_BALL }}
           >
             <button
-              disabled={!unlocked}
               onClick={() => router.push("/sign-in")}
-              className={`h-[40px] w-[160px] rounded-full text-white font-bold text-[14px] tracking-wide
+              className="h-[40px] w-[160px] rounded-full text-white font-bold text-[14px] tracking-wide
                 shadow-[0_10px_24px_rgba(0,0,0,.45)]
                 bg-[radial-gradient(120%_120%_at_50%_10%,#ff6b6b_0%,#d90429_40%,#b00020_70%,#7a0015_100%)]
-                border border-white/15
-                ${unlocked ? "" : "opacity-50 cursor-not-allowed"}`}
+                border border-white/15"
             >
               UNLOCK NOW
             </button>
@@ -177,16 +117,8 @@ export default function LandingPage() {
             style={{ top: SCROLL_CUE_TOP }}
             aria-label="Scroll to Learn More"
           >
-            <span
-              className={`text-[14px] mb-4 ${unlocked ? "" : "opacity-60"}`}
-            >
-              Scroll to Learn More
-            </span>
-            <ChevronsDown
-              className={`w-7 h-7 ${
-                unlocked ? "animate-bounce" : "opacity-60"
-              }`}
-            />
+            <span className="text-[14px] mb-4">Scroll to Learn More</span>
+            <ChevronsDown className="w-7 h-7 animate-bounce" />
           </button>
         </div>
 
@@ -212,20 +144,38 @@ export default function LandingPage() {
             />
             <div className="relative z-10 px-5 pt-8 pb-10 text-white">
               <h2 className="text-center text-[22px] font-extrabold tracking-wider mb-4">
-                100 <span className="text-red-500">REWARDS</span> AWAIT!
+                <span className="text-red-500">EXCITING</span> REWARDS AWAIT!
               </h2>
 
-              <div className="mx-auto w-[250px] space-y-4 p-3">
-                {[
-                  "100 FREE GYM MEMBERSHIPS & TRIALS",
-                  "PHYSICAL ASIA EXCLUSIVE MERCHANDISE",
-                  "MEET THE PHYSICAL ASIA WINNER",
-                ].map((t, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="h-7 w-7 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
-                    <p className="text-[12px] leading-snug">{t}</p>
+              {/* Rewards list – style seperti contoh kanan */}
+              <div className="mx-auto w-[300px] space-y-5 p-3">
+                {/* GRAND PRIZE */}
+                <div className="flex items-start gap-4">
+                  <span className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+                  <div>
+                    <div className="uppercase font-extrabold tracking-wide text-[14px]">
+                      GRAND PRIZE
+                    </div>
+                    <p className="text-[12px] leading-snug opacity-90">
+                      WIN 3 months of dual brand gym memberships at Fitness
+                      First &amp; Celebrity Fitness
+                    </p>
                   </div>
-                ))}
+                </div>
+
+                {/* GUARANTEED REWARD */}
+                <div className="flex items-start gap-4">
+                  <span className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+                  <div>
+                    <div className="uppercase font-extrabold tracking-wide text-[14px]">
+                      GUARANTEED REWARD
+                    </div>
+                    <p className="text-[12px] leading-snug opacity-90">
+                      FREE 3 days gym trial at Fitness First &amp; Celebrity
+                      Fitness
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <h3 className="text-center text-[20px] font-extrabold tracking-wider mt-8 mb-3">
@@ -237,7 +187,7 @@ export default function LandingPage() {
                 {[
                   {
                     n: "01",
-                    t: "Upload receipt or membership upload to unlock the challenge.",
+                    t: "Upload receipt or membership gym to unclock the challange.",
                   },
                   {
                     n: "02",
@@ -245,11 +195,11 @@ export default function LandingPage() {
                   },
                   {
                     n: "03",
-                    t: "Collect as many points as possible & stay consistent daily to earn bonus points.",
+                    t: "Collect as many points as possible and stay consistent daily to earn bonus points.",
                   },
                   {
                     n: "04",
-                    t: "Compete on the leaderboard to win Weekly, Monthly, Most Consistent, and Grand Prizes.",
+                    t: "Compete on the leaderboard to win the Grand Prizes.",
                   },
                 ].map((s, i) => {
                   const INDENT = 36;
@@ -282,7 +232,7 @@ export default function LandingPage() {
                 })}
 
                 <a
-                  href={leaderboardHref}
+                  href="/leaderboard"
                   className="inline-block text-[12px] font-semibold underline text-red-500 pl-20"
                 >
                   Leaderboard

@@ -40,16 +40,13 @@ function isValidatorErrArray(val: unknown): val is ValidatorError[] {
   return Array.isArray(val) && val.every((x) => isRecord(x));
 }
 
-const COUNTRIES = [{ code: "MY", label: "Malaysia" }];
-const COUNTRY_DIAL: Record<string, string> = { MY: "+60" };
-const DEFAULT_CODE = "MY";
-const codeToLabel = (code?: string | null) =>
-  COUNTRIES.find((c) => c.code === (code || "").toUpperCase())?.label;
-
 const normalizeNumber = (raw?: string) => {
   const digits = String(raw || "").replace(/\D+/g, "");
   return digits.replace(/^0+/, "");
 };
+
+const COUNTRY_CODE = "MY";
+const DIAL_CODE = "+60";
 
 const registerSchema = z
   .object({
@@ -137,20 +134,10 @@ function extractServerErrors<TFields>(
 export default function RegisterPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [country, setCountry] = useState<string | null>(null);
   const router = useRouter();
 
   const API_BASE = "/api/v1";
   const DRAFT_KEY = "registerDraft:v1";
-
-  useEffect(() => {
-    try {
-      const c = (sessionStorage.getItem("guestRegion") || "").toUpperCase();
-      setCountry(c || null);
-    } catch {
-      setCountry(null);
-    }
-  }, []);
 
   const {
     register,
@@ -208,17 +195,6 @@ export default function RegisterPage() {
     return () => sub.unsubscribe();
   }, [watch]);
 
-  const usingCountryLabel = useMemo(() => {
-    const label = codeToLabel(country);
-    if (label) return label;
-    return codeToLabel(DEFAULT_CODE) || DEFAULT_CODE;
-  }, [country]);
-
-  const dialCode = useMemo(() => {
-    const c = (country || DEFAULT_CODE).toUpperCase();
-    return COUNTRY_DIAL[c] || COUNTRY_DIAL[DEFAULT_CODE];
-  }, [country]);
-
   useEffect(() => {
     const prev = document.body.style.overflow;
     if (menuOpen) document.body.style.overflow = "hidden";
@@ -235,7 +211,6 @@ export default function RegisterPage() {
 
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     setApiError(null);
-    const countryCode = (country || DEFAULT_CODE).toUpperCase();
 
     try {
       await axios.post(`${API_BASE}/auth/register`, {
@@ -245,12 +220,12 @@ export default function RegisterPage() {
         password: data.password,
         gender: data.gender,
         phoneNumber: data.phoneNumber
-          ? `${dialCode}${normalizeNumber(data.phoneNumber)}`
+          ? `${DIAL_CODE}${normalizeNumber(data.phoneNumber)}`
           : undefined,
-        country: countryCode,
+        country: COUNTRY_CODE,
       });
 
-      sessionStorage.removeItem(DRAFT_KEY); // hapus draft setelah sukses
+      sessionStorage.removeItem(DRAFT_KEY);
       router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -300,14 +275,6 @@ export default function RegisterPage() {
 
       <div className="relative z-10 w-full px-5 pt-6 pb-8 text-white">
         <h1 className="text-[28px] font-extrabold mb-6">Sign Up</h1>
-
-        <div className="mb-4 text-[12px] text-white/80">
-          Using country:{" "}
-          <span className="font-semibold">
-            {usingCountryLabel}
-            {!country ? " (default)" : ""}
-          </span>
-        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Full Name */}
@@ -394,7 +361,7 @@ export default function RegisterPage() {
             </label>
             <div className="flex items-center gap-2">
               <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
-                {dialCode}
+                {DIAL_CODE}
               </span>
               <input
                 {...register("phoneNumber")}
