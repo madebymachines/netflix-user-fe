@@ -10,12 +10,10 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 import * as htmlToImage from "html-to-image";
 
-// ---------------- Types ----------------
-type TimespanUI = "All Time" | "Weekly" | "Top Streak";
-const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "weekly" | "streak"> = {
+type TimespanUI = "All Time" | "Monthly";
+const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "monthly"> = {
   "All Time": "alltime",
-  Weekly: "weekly",
-  "Top Streak": "streak",
+  Monthly: "monthly",
 };
 
 type Row = {
@@ -23,7 +21,7 @@ type Row = {
   username: string;
   profilePictureUrl: string | null;
   points: number;
-  streak?: number;
+  totalReps: number;
   gender?: "MALE" | "FEMALE";
 };
 
@@ -37,7 +35,6 @@ type LeaderboardResponse = {
   leaderboard: Row[];
 };
 
-// ---------------- Helpers ----------------
 function frameForPoints(points: number | null | undefined): string {
   const p = Math.max(0, Number(points ?? 0));
   if (p >= 6000) return "/images/f_legendary.png";
@@ -46,7 +43,6 @@ function frameForPoints(points: number | null | undefined): string {
   return "/images/f_rookie.png";
 }
 
-// deteksi iOS
 const isIOS =
   typeof navigator !== "undefined" &&
   (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -54,7 +50,6 @@ const isIOS =
       typeof document !== "undefined" &&
       "ontouchend" in document));
 
-// SVG placeholder inline (last resort)
 const FALLBACK_DATA_URI =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -65,7 +60,6 @@ const FALLBACK_DATA_URI =
      </svg>`
   );
 
-// proxy url eksternal supaya aman untuk html-to-image
 function proxiedSrc(src?: string | null): string {
   if (!src) return "";
   if (typeof window !== "undefined") {
@@ -75,7 +69,6 @@ function proxiedSrc(src?: string | null): string {
   return `/api/img?u=${encodeURIComponent(src)}`;
 }
 
-// <img> aman dengan fallback berantai (external → placeholder lokal → SVG inline)
 function SafeImg({
   src,
   alt,
@@ -106,7 +99,6 @@ function SafeImg({
   );
 }
 
-/** iOS: fetch -> dataURL supaya <svg><image> selalu berhasil dirender ke canvas */
 function useShareSrc(src?: string | null): string {
   const [out, setOut] = useState<string>("");
   useEffect(() => {
@@ -169,14 +161,11 @@ function HexFrameAvatar({
       : "/images/placeholder_male.png";
   const photoSrc = src || genderPlaceholder;
 
-  // ✅ Hooks dipanggil SELALU di top-level (tidak kondisional)
   const rawId = useId();
   const svgId = `hex-${rawId.replace(/:/g, "")}`;
-  // panggil hook-nya selalu; kalau tidak share, kirim null supaya efeknya tidak jalan
   const sharePhotoUrl =
     useShareSrc(forShare ? photoSrc : null) || genderPlaceholder;
 
-  // ----- SHARE MODE (pakai SVG clipPath) -----
   if (forShare) {
     const inner = size - 2 * inset;
     const x0 = inset;
@@ -288,7 +277,6 @@ function HexFrameAvatar({
   );
 }
 
-// tunggu semua <img> selesai load di dalam node
 function waitForImages(root: HTMLElement): Promise<void> {
   const imgs = Array.from(root.querySelectorAll("img"));
   const pending = imgs
@@ -302,8 +290,6 @@ function waitForImages(root: HTMLElement): Promise<void> {
     );
   return Promise.all(pending).then(() => undefined);
 }
-
-// cek dukungan share file
 function canNativeShareFiles(files: File[]): boolean {
   if (typeof navigator === "undefined") return false;
   const nav = navigator as Navigator & {
@@ -311,7 +297,6 @@ function canNativeShareFiles(files: File[]): boolean {
   };
   return typeof nav.canShare === "function" ? nav.canShare({ files }) : false;
 }
-
 function isShareAbort(err: unknown): boolean {
   const e = err as { name?: string; message?: string };
   const name = (e?.name || "").toLowerCase();
@@ -321,7 +306,6 @@ function isShareAbort(err: unknown): boolean {
   );
 }
 
-// ---------------- Main Component ----------------
 export default function LeaderboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<TimespanUI>("All Time");
@@ -332,15 +316,9 @@ export default function LeaderboardPage() {
   const { user, isLoading, checkAuth } = useAuthStore();
   const isLoggedIn = !!user;
 
-  const REGION_CODE = "MY";
-  const REGION_LABEL = "Malaysia";
-
-  const getScore = (r?: Row) =>
-    period === "Top Streak" ? Number(r?.streak ?? 0) : Number(r?.points ?? 0);
-
   useEffect(() => {
     checkAuth({ allowRefresh: false });
-  }, []);
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -353,7 +331,6 @@ export default function LeaderboardPage() {
             timespan: TIMESPAN_TO_QUERY[period],
             page: 1,
             limit: 10,
-            region: REGION_CODE,
           },
           signal: ctrl.signal,
           _skipAuthRefresh: true,
@@ -397,43 +374,33 @@ export default function LeaderboardPage() {
   const handleShare = async () => {
     const node = shareRef.current;
     if (!node) return;
-
     try {
       await waitForImages(node);
       const pxRatio = isIOS ? 2 : 3;
-
       const dataUrl = await htmlToImage.toPng(node, {
         pixelRatio: pxRatio,
         backgroundColor: "#000000",
         cacheBust: true,
       });
-
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File(
-        [blob],
-        `leaderboard-${REGION_LABEL}-${period}.png`,
-        { type: "image/png" }
-      );
+      const file = new File([blob], `leaderboard-${period}.png`, {
+        type: "image/png",
+      });
 
       const shareData: ShareData = {
         title: "Leaderboard",
-        text: `Physical Asia – ${REGION_LABEL} • ${period}`,
+        text: `Physical Asia • ${period}`,
         files: [file],
       };
 
       const canShare =
         canNativeShareFiles([file]) && typeof navigator.share === "function";
-
       if (canShare) {
         try {
           await navigator.share(shareData);
         } catch (err) {
-          if (isShareAbort(err)) {
-            console.log("Share cancelled/taken over by target app.");
-            return;
-          }
-          console.error("Share failed:", err);
+          if (isShareAbort(err)) return;
           const a = document.createElement("a");
           a.href = dataUrl;
           a.download = file.name;
@@ -461,7 +428,7 @@ export default function LeaderboardPage() {
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
-      {/* Background UI normal */}
+      {/* Background */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -475,9 +442,9 @@ export default function LeaderboardPage() {
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      {/* === Area yang akan di-capture === */}
+      {/* ======== Capture area for share ======== */}
       <div ref={shareRef} className="relative z-10 w-full text-white px-4 pb-6">
-        {/* BG khusus share agar ikut tertangkap */}
+        {/* Background duplication for share */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <SafeImg
             src="/images/ball.png"
@@ -488,6 +455,7 @@ export default function LeaderboardPage() {
           <div className="absolute inset-0 bg-black/30" />
         </div>
 
+        {/* Logo */}
         <div className="w-full flex justify-center pt-2">
           <SafeImg
             src="/images/logo2.png"
@@ -497,19 +465,14 @@ export default function LeaderboardPage() {
           />
         </div>
 
+        {/* Title */}
         <h1 className="mt-4 text-center font-semibold text-red-500 text-[20px] tracking-widest">
           LEADERBOARD
         </h1>
 
-        <div className="w-[320px] mx-auto mt-1">
-          <div className="h-8 rounded-md bg-red-600 grid place-items-center font-heading text-[12px] tracking-wider">
-            {REGION_LABEL.toUpperCase()}
-          </div>
-        </div>
-
-        {/* Filter */}
-        <div className="grid grid-cols-3 gap-2 w-[320px] mx-auto mt-2">
-          {(["All Time", "Weekly", "Top Streak"] as const).map((it) => {
+        {/* Filters: All Time / Monthly */}
+        <div className="grid grid-cols-2 gap-2 w-[320px] mx-auto mt-3">
+          {(["All Time", "Monthly"] as const).map((it) => {
             const active = period === it;
             return (
               <button
@@ -531,6 +494,7 @@ export default function LeaderboardPage() {
           </div>
         )}
 
+        {/* Podium + Table card */}
         <div className="w-[320px] mx-auto mt-3 p-3 rounded-xl bg-black/30 border border-white/10">
           {/* Podium */}
           <div className="flex items-end justify-center gap-6">
@@ -538,7 +502,7 @@ export default function LeaderboardPage() {
               const size = idx === 1 ? 92 : 82;
               const rank = (idx === 1 ? 1 : idx === 0 ? 2 : 3) as 1 | 2 | 3;
               const shiftY = idx === 1 ? -12 : 20;
-              const display = getScore(p);
+              const display = Number(p?.points ?? 0);
               return (
                 <div
                   key={rank}
@@ -568,40 +532,49 @@ export default function LeaderboardPage() {
             })}
           </div>
 
-          {/* Tabel */}
+          {/* Table */}
           <div className="mt-6 rounded-md overflow-hidden border border-white/10">
-            <div className="grid grid-cols-[40px_1fr_70px] bg-black/60 text-[10px] uppercase tracking-widest px-2 py-2">
+            <div className="grid grid-cols-[36px_1fr_70px_80px] bg-black/60 text-[10px] uppercase tracking-widest px-2 py-2">
               <div>Rank</div>
               <div>User</div>
-              <div className="text-right pr-1">Points</div>
+              <div className="text-right pr-1">Total Rep</div>
+              <div className="text-right pr-1">Total Points</div>
             </div>
             <div className="bg-black/30">
               {loading ? (
                 <div className="px-2 py-3 text-[12px] opacity-80">Loading…</div>
               ) : (
-                tableRows.map((r) => (
-                  <div
-                    key={`${r.rank}-${r.username}`}
-                    className="grid grid-cols-[40px_1fr_70px] text-[11px] px-2 py-1 border-t border-white/5"
-                  >
-                    <div>{String(r.rank).padStart(2, "0")}</div>
+                tableRows.map((r, idx) => {
+                  const self = isSelf(r.username);
+                  const base =
+                    "grid grid-cols-[36px_1fr_70px_80px] text-[11px] px-2 py-1 border-t border-white/5";
+                  return (
                     <div
-                      className={`${isSelf(r.username) ? "text-red-500" : ""}`}
+                      key={`${r.rank}-${r.username}`}
+                      className={`${base} ${
+                        self ? "bg-red-600 text-white" : ""
+                      } ${idx === tableRows.length - 1 ? "rounded-b-md" : ""}`}
                     >
-                      @{r.username}
+                      <div>{String(r.rank).padStart(2, "0")}</div>
+                      <div className={`${self ? "font-semibold" : ""}`}>
+                        @{r.username}
+                      </div>
+                      <div className="text-right pr-1">
+                        {Number(r.totalReps || 0).toLocaleString("id-ID")}
+                      </div>
+                      <div className="text-right pr-1">
+                        {Number(r.points || 0).toLocaleString("id-ID")}
+                      </div>
                     </div>
-                    <div className="text-right pr-1">
-                      {getScore(r).toLocaleString("id-ID")}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tombol Share */}
+      {/* Share button */}
       <div className="relative z-10 w-[320px] mx-auto -mt-2 mb-6">
         <button
           className="w-full h-[40px] rounded-md font-heading tracking-wider bg-white text-black"
