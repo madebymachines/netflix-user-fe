@@ -1,6 +1,8 @@
-// AudioUtils.tsx - Fixed version for mobile compatibility
+// AudioUtils.tsx - Fixed version with proper speech queue management
 let audioContext: AudioContext | null = null;
 let isAudioEnabled = false;
+let speechQueue: Array<{ text: string; rate: number; volume: number; resolve: () => void }> = [];
+let isProcessingQueue = false;
 
 // Initialize audio context after user interaction
 const initAudioContext = (): void => {
@@ -58,8 +60,6 @@ export const testAudio = async (): Promise<boolean> => {
       }
     }
     
-    // Test with actual text instead of empty string
-    await speakText('', 1.0, 0.8);
     console.log('Audio test completed successfully');
     return true;
   } catch (error) {
@@ -150,12 +150,40 @@ const selectVoice = (): SpeechSynthesisVoice | null => {
   return selectedVoice;
 };
 
-// Simplified speak text function based on working .js version
-const speakText = (text: string, rate: number = 1.0, volume: number = 0.8): Promise<void> => {
+// Process the speech queue sequentially
+const processQueue = async (): Promise<void> => {
+  if (isProcessingQueue || speechQueue.length === 0) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (speechQueue.length > 0) {
+    const item = speechQueue.shift();
+    if (!item) continue;
+
+    await speakTextImmediate(item.text, item.rate, item.volume);
+    item.resolve();
+    
+    // Add a small delay between speeches to prevent interruption
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  isProcessingQueue = false;
+};
+
+// Immediate speech function (internal use only)
+const speakTextImmediate = (text: string, rate: number = 1.0, volume: number = 0.8): Promise<void> => {
   return new Promise((resolve) => {
     // Check if speech synthesis is available
     if (!('speechSynthesis' in window)) {
       console.warn('Speech synthesis not supported');
+      resolve();
+      return;
+    }
+
+    // Skip empty text
+    if (!text.trim()) {
       resolve();
       return;
     }
@@ -165,56 +193,64 @@ const speakText = (text: string, rate: number = 1.0, volume: number = 0.8): Prom
       initAudioContext();
     }
     
-    // Cancel any ongoing speech
-    speechSynthesis.cancel();
-    
-    // Small delay to ensure cancellation is processed
-    setTimeout(() => {
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = rate;
-        utterance.volume = volume;
-        utterance.pitch = 1.0;
-        
-        // Set voice
-        const voice = selectVoice();
-        if (voice) {
-          utterance.voice = voice;
-          console.log('Using voice:', voice.name, voice.lang);
-        } else {
-          console.warn('No suitable voice found');
-        }
-        
-        // Add event listeners
-        utterance.onstart = () => {
-          console.log('Speech started:', text);
-        };
-        
-        utterance.onend = () => {
-          console.log('Speech ended:', text);
-          resolve();
-        };
-        
-        utterance.onerror = (event) => {
-          console.error('Speech error:', event.error, text);
-          resolve(); // Resolve instead of reject to continue app flow
-        };
-        
-        speechSynthesis.speak(utterance);
-        
-        // Fallback timeout in case speech doesn't work
-        setTimeout(() => {
-          if (speechSynthesis.speaking) {
-            speechSynthesis.cancel();
-          }
-          resolve();
-        }, 5000); // 5 second timeout
-        
-      } catch (error) {
-        console.error('Error speaking text:', error);
-        resolve();
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.volume = volume;
+      utterance.pitch = 1.0;
+      
+      // Set voice
+      const voice = selectVoice();
+      if (voice) {
+        utterance.voice = voice;
       }
-    }, 100);
+      
+      // Add event listeners with better error handling
+      utterance.onstart = () => {
+        console.log('Speech started:', text);
+      };
+      
+      utterance.onend = () => {
+        console.log('Speech ended:', text);
+        resolve();
+      };
+      
+      utterance.onerror = (event) => {
+        // Only log actual errors, not interruptions
+        if (event.error !== 'interrupted') {
+          console.error('Speech error:', event.error, text);
+        }
+        resolve(); // Always resolve to continue app flow
+      };
+      
+      speechSynthesis.speak(utterance);
+      
+      // Fallback timeout in case speech doesn't work
+      setTimeout(() => {
+        resolve();
+      }, Math.max(3000, text.length * 100)); // Dynamic timeout based on text length
+      
+    } catch (error) {
+      console.error('Error speaking text:', error);
+      resolve();
+    }
+  });
+};
+
+// Queue-based speak text function
+const speakText = (text: string, rate: number = 1.0, volume: number = 0.8): Promise<void> => {
+  return new Promise((resolve) => {
+    // Skip empty text
+    if (!text.trim()) {
+      resolve();
+      return;
+    }
+
+    // Add to queue
+    speechQueue.push({ text, rate, volume, resolve });
+    
+    // Process queue
+    processQueue();
   });
 };
 
@@ -245,6 +281,12 @@ export const playAnnouncement = async (text: string): Promise<void> => {
 
 export const stopAllAudio = (): void => {
   console.log('Stopping all audio');
+  
+  // Clear the queue
+  speechQueue.length = 0;
+  isProcessingQueue = false;
+  
+  // Cancel any ongoing speech
   if (speechSynthesis.speaking) {
     speechSynthesis.cancel();
   }
@@ -256,6 +298,8 @@ export const getAudioState = () => {
     isAudioEnabled,
     audioContextState: audioContext?.state,
     speechSynthesisSupported: 'speechSynthesis' in window,
-    voicesCount: speechSynthesis.getVoices().length
+    voicesCount: speechSynthesis.getVoices().length,
+    queueLength: speechQueue.length,
+    isProcessingQueue
   };
 };

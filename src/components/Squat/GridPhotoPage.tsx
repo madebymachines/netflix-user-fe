@@ -441,13 +441,23 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     }
   };
 
+  useEffect(() => {
+    const autoSubmitActivity = async () => {
+      if (gridImage && !isSubmissionComplete && !isSubmittingActivity) {
+        await handleSubmitActivity();
+      }
+    };
+
+    autoSubmitActivity();
+  }, [gridImage]);
+
   const handleShare = async (): Promise<void> => {
     if (!gridImage) {
       console.log('No grid image available for sharing');
       return;
     }
 
-    await handleSubmitActivity();
+    // await handleSubmitActivity();
 
     try {
       const response = await fetch(gridImage);

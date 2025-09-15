@@ -261,7 +261,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
         }, 2000);
-      }, 2000);
+      }, 1000);
     }
   }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations]);
 
@@ -454,61 +454,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       };
     }
   }, [phase, handlePhaseComplete]);
-
-  // const handlePhaseComplete = (): void => {
-  //   if (phase === 'setup') {
-  //     // Langsung ke hydrate, skip position-before-hydrate
-  //     setPhase('hydrate');
-  //     setTimeRemaining(10);
-  //     setProgressPercent(0);
-  //   } else if (phase === 'hydrate') {
-  //     takeScreenshot('hydrate');
-  //     setProgressPercent(100);
-  //     setTimeout(() => {
-  //       setPhase('go');
-  //       setTimeout(() => {
-  //         setPhase('exercise');
-  //         setTimeRemaining(50);
-  //         setProgressPercent(0);
-  //         squatCounterRef.current.resetCount();
-  //         setSquatCount(0);
-  //         setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-  //       }, 2000);
-  //     }, 1000);
-  //   } else if (phase === 'exercise') {
-  //     setProgressPercent(100);
-  //     if (currentRound === 1) {
-  //       // Langsung ke recovery, skip position validation
-  //       setPhase('recovery');
-  //       setTimeRemaining(10);
-  //       setProgressPercent(0);
-  //     } else {
-  //       if (!hasSpokenCongratulations) {
-  //         playAnnouncement('Congratulations! You finished your challenge!');
-  //         setHasSpokenCongratulations(true);
-  //       }
-  //       setTimeout(() => {
-  //         setPhase('grid');
-  //       }, 3000);
-  //     }
-  //   } else if (phase === 'recovery') {
-  //     takeScreenshot('recovery');
-  //     setProgressPercent(100);
-  //     setTimeout(() => {
-  //       // Langsung ke GO untuk round 2, skip position-before-recovery
-  //       setPhase('go');
-  //       setCurrentRound(2);
-  //       setTimeout(() => {
-  //         setPhase('exercise');
-  //         setTimeRemaining(50);
-  //         setProgressPercent(0);
-  //         squatCounterRef.current.resetCount();
-  //         setSquatCount(0);
-  //         setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-  //       }, 2000);
-  //     }, 1000);
-  //   }
-  // };
 
   const handleContinue = (): void => {
     if (isFpsCompatible) {
