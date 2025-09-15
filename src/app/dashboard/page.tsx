@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import MobileShell from "@/components/MobileShell";
@@ -16,20 +16,6 @@ type PurchaseStatusResponse = {
   reason?: string | null;
   submittedAt?: string | null;
   reviewedAt?: string | null;
-};
-
-type WeeklyAPI = {
-  weekly: {
-    senin: number;
-    selasa: number;
-    rabu: number;
-    kamis: number;
-    jumat: number;
-    sabtu: number;
-    minggu: number;
-  };
-  averageRepsPerDay: number;
-  averageChallengePerWeek: number;
 };
 
 function getLevelAssets(points: number) {
@@ -63,23 +49,21 @@ function getLevelAssets(points: number) {
 
 export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [weeklyApi, setWeeklyApi] = useState<WeeklyAPI | null>(null);
-
   const { user, stats, isLoading } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
-
     let active = true;
     (async () => {
       try {
         const { data } = await api.get<PurchaseStatusResponse>(
           "/user/purchase-verification/status",
-          { _skipAuthRefresh: true }
+          {
+            _skipAuthRefresh: true,
+          }
         );
         if (!active) return;
-
         if (data.status === "REJECTED") {
           const msg = encodeURIComponent(data.reason ?? "");
           router.replace(
@@ -90,11 +74,10 @@ export default function DashboardPage() {
         }
       } catch (err: unknown) {
         if (isAxiosError(err)) {
-          // biarkan interceptor auth yang handle
+          // biar auth interceptor yang handle
         }
       }
     })();
-
     return () => {
       active = false;
     };
@@ -128,45 +111,6 @@ export default function DashboardPage() {
     { value: stats?.totalCalori ?? 0, l1: "BURNED", l2: "KCAL" },
   ];
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const { data } = await api.get<WeeklyAPI>(
-          "/activities/stats/weekly-workout"
-        );
-        if (!active) return;
-        setWeeklyApi(data);
-      } catch (e) {
-        console.warn("Failed to fetch weekly workout", e);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const dayOrder = [
-    "senin",
-    "selasa",
-    "rabu",
-    "kamis",
-    "jumat",
-    "sabtu",
-    "minggu",
-  ] as const;
-  const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-  const dayValues: number[] = useMemo(() => {
-    if (!weeklyApi) return [0, 0, 0, 0, 0, 0, 0];
-    return dayOrder.map((k) => Math.max(0, weeklyApi.weekly[k]));
-  }, [weeklyApi]);
-
-  const maxVal = Math.max(1, ...dayValues);
-  const barHeights = dayValues.map((v) => `${(v / maxVal) * 100}%`);
-  const challengePerWeek = weeklyApi?.averageChallengePerWeek ?? 0;
-  const avgRepsPerDay = weeklyApi?.averageRepsPerDay ?? 0;
-
   const authMenu = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Profile", href: "/profile" },
@@ -189,7 +133,7 @@ export default function DashboardPage() {
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
     >
-      {/* BG */}
+      {/* Background */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -206,7 +150,7 @@ export default function DashboardPage() {
       <div
         className="relative z-10 w-full overflow-visible text-white grid justify-items-center pb-10"
         style={{
-          gridTemplateRows: "73px 116px 64px 160px auto",
+          gridTemplateRows: "73px 116px 64px auto",
           rowGap: "8px",
         }}
       >
@@ -221,15 +165,10 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Row profil */}
-        <section className="w-[320px] h-[116px] flex items-center">
+        {/* Profil + points */}
+        <section className="w-[320px] h-[116px] flex items-center mt-30">
           <div className="relative w-[116px] h-[116px] shrink-0">
-            <div
-              className="
-                absolute inset-[18%] overflow-hidden
-                [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]
-              "
-            >
+            <div className="absolute inset-[18%] overflow-hidden [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]">
               <Image
                 src={userDisplayData.photoUrl}
                 alt="User"
@@ -262,14 +201,12 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Data pengguna */}
           <div className="flex-1 h-[116px] flex flex-col justify-center">
             <div className="font-heading text-[12px] tracking-[.02em] leading-none">
               {userDisplayData.name}
             </div>
 
             <div className="flex items-end gap-2">
-              {/* Physical Points */}
               <div className="flex flex-col items-center justify-end h-[55px]">
                 <div className="font-heading tabular-nums text-[30px] text-red-500 leading-none">
                   {Intl.NumberFormat("id-ID").format(userDisplayData.points)}
@@ -297,8 +234,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Stats singkat */}
-        <section className="grid grid-cols-3 w-[320px] h-[64px]">
+        {/* Tiga statistik singkat */}
+        <section className="grid grid-cols-3 w-[320px] h-[64px] mt-30">
           {statsCards.map((s, i) => (
             <div key={i} className="flex flex-col items-center justify-center">
               <div className="font-heading tabular-nums text-[28px] leading-none">
@@ -313,74 +250,14 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        {/* Weekly card */}
-        <section className="w-[320px] h-[160px] rounded-2xl bg-[#3a3a3a] text-white/95">
-          <div className="h-full w-full px-3 pt-3">
-            <div className="font-heading text-[12px] tracking-[.02em]">
-              WEEKLY WORKOUTS
-            </div>
-
-            <div className="mt-1 flex justify-between">
-              {/* Chart kiri */}
-              <div className="w-[193px] h-[109px]">
-                <div className="grid grid-cols-7 items-end h-[90px]">
-                  {barHeights.map((h, i) => {
-                    const active = dayValues[i] > 0;
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-end justify-center h-full"
-                      >
-                        <div
-                          className="w-[14px] rounded-t-md transition-[height] duration-300"
-                          style={{
-                            height: h,
-                            background: active
-                              ? "linear-gradient(180deg,#ff3b3b,#a40012)"
-                              : "linear-gradient(180deg,#6a6a6a,#434343)",
-                          }}
-                          title={`${dayLabels[i]}: ${dayValues[i]}`}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-[6px] grid grid-cols-7 text-center text-[9px] opacity-90">
-                  {dayLabels.map((d, idx) => (
-                    <div key={idx}>{d[0]}</div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Angka kanan */}
-              <div className="w-[56px] h-[102px] text-right mr-4">
-                <div className="font-heading tabular-nums text-[30px] leading-none">
-                  {Intl.NumberFormat("id-ID").format(challengePerWeek)}
-                </div>
-                <div className="font-heading text-[9px] uppercase tracking-widest opacity-90">
-                  CHALLENGE/WEEK
-                </div>
-
-                <div className="mt-[24px] font-heading tabular-nums text-[30px] leading-none">
-                  {Intl.NumberFormat("id-ID").format(avgRepsPerDay)}
-                </div>
-                <div className="font-heading text-[9px] uppercase tracking-widest opacity-90">
-                  AVG.REPS/DAY
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <a
-          href="/challenge"
-          className="w-[320px] h-[56px] mt-8 rounded-md grid place-items-center font-heading text-[15px] tracking-[.02em]
-                     bg-[radial-gradient(120%_120%_at_50%_10%,#ff6b6b_0%,#d90429_40%,#b00020_70%,#7a0015_100%)]
-                     shadow-[0_10px_24px_rgba(0,0,0,.45)]"
+        <button
+          onClick={() => router.push("/challenge")}
+          className="w-[320px] h-[56px] mt-48 rounded-md grid place-items-center font-heading text-[15px] tracking-[.02em]
+                   bg-[radial-gradient(120%_120%_at_50%_10%,#ff6b6b_0%,#d90429_40%,#b00020_70%,#7a0015_100%)]
+                   shadow-[0_10px_24px_rgba(0,0,0,.45)]"
         >
           START CHALLENGE
-        </a>
+        </button>
       </div>
 
       <OverlayMenu
