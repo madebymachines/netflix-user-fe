@@ -125,7 +125,7 @@ export default function VerifyPurchasePage() {
     method === "RECEIPT"
       ? rejected
         ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
-        : "To continue, please upload full receipt / proof of purchase of 100 Plus Drink below."
+        : "To continue, please upload full receipt / proof of purchase of 100PLUS Drink below."
       : "To continue, please upload a photo of the front of your gym membership card.";
 
   const uploadLabel =
@@ -200,7 +200,7 @@ export default function VerifyPurchasePage() {
         <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
           {title}
         </h1>
-        <p className="mb-4 text-center text-[12px] leading-snug opacity-90">
+        <p className="mb-4 px-3 text-center text-[12px] leading-snug opacity-90">
           {desc}
         </p>
 
@@ -266,8 +266,10 @@ export default function VerifyPurchasePage() {
           <>
             <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
             <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
-              This verification is only for member of{" "}
-              <span className="font-extrabold">Fitness Verse</span>
+              This verification is only for member of <br />
+              <span className="font-extrabold text-[20px]">
+                Fitness First or Celebrity Fitness
+              </span>
             </p>
           </>
         )}
