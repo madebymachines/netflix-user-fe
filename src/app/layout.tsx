@@ -22,7 +22,7 @@ export default function RootLayout({
         className='bg-black antialiased'
       >
         {children}
-        {/* <DesktopGate>{children}</DesktopGate> */}
+        <DesktopGate>{children}</DesktopGate>
       </body>
     </html>
   );
