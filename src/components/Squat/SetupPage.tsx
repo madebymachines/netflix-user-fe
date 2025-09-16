@@ -70,10 +70,10 @@ const SetupPage: React.FC<SetupPageProps> = ({
           borderRadius: '5px',
         }}
       >
-        {/* <YouTubeVideo
+        <YouTubeVideo
           videoId={YOUTUBE_VIDEO_ID}
           className="w-full h-full"
-        /> */}
+        />
         
         {/* Hidden webcam for initialization */}
         <video
