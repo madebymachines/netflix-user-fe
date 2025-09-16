@@ -70,24 +70,34 @@ export const enableAudio = async (): Promise<void> => {
       }, { once: true });
     }
     
-    // Test with a silent utterance to "prime" the speech synthesis
+    // Test with a silent utterance to "prime" the speech synthesis for mobile
     try {
-      const testUtterance = new SpeechSynthesisUtterance('');
-      testUtterance.volume = 0;
-      testUtterance.rate = 1;
+      const testUtterance = new SpeechSynthesisUtterance(' '); // Single space instead of empty
+      testUtterance.volume = 0.01; // Very low volume instead of 0
+      testUtterance.rate = 2; // Fast rate
       testUtterance.pitch = 1;
       
       testUtterance.onstart = () => {
-        console.log('Silent test utterance started successfully');
+        console.log('Priming utterance started successfully - audio is ready');
+        isAudioEnabled = true;
+      };
+      
+      testUtterance.onend = () => {
+        console.log('Priming utterance ended successfully');
       };
       
       testUtterance.onerror = (event) => {
-        console.log('Silent test utterance error (expected):', event.error);
+        console.log('Priming utterance error (may be normal):', event.error);
+        // Still consider audio enabled even if priming fails
+        isAudioEnabled = true;
       };
       
       speechSynthesis.speak(testUtterance);
+      console.log('Priming utterance queued');
     } catch (error) {
-      console.error('Error with test utterance:', error);
+      console.error('Error with priming utterance:', error);
+      // Still mark as enabled to allow attempts
+      isAudioEnabled = true;
     }
   } else {
     console.error('SpeechSynthesis not available in this browser');

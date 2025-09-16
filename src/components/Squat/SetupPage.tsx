@@ -42,6 +42,35 @@ const SetupPage: React.FC<SetupPageProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-enable audio when component mounts (but don't force interaction)
+  useEffect(() => {
+    const handleFirstInteraction = async () => {
+      console.log('First user interaction detected, enabling audio...');
+      try {
+        await enableAudio();
+        setAudioState(getAudioState());
+      } catch (error) {
+        console.error('Error enabling audio on first interaction:', error);
+      }
+    };
+
+    // Listen for any user interaction to enable audio
+    const events = ['click', 'touch', 'touchstart', 'keydown'];
+    const addListeners = () => {
+      events.forEach(event => {
+        document.addEventListener(event, handleFirstInteraction, { once: true, passive: true });
+      });
+    };
+
+    addListeners();
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleFirstInteraction);
+      });
+    };
+  }, []);
+
   const handleTestAudio = async (): Promise<void> => {
     console.log('Testing audio manually...');
     setAudioTestResult(null);
@@ -64,22 +93,35 @@ const SetupPage: React.FC<SetupPageProps> = ({
   };
 
   const handleContinue = async (): Promise<void> => {
-    // Test audio before continuing
-    console.log('Testing audio before starting challenge...');
-    await enableAudio();
-    const audioWorking = await testAudio();
+    console.log('Continue button clicked - enabling audio and starting challenge...');
     
-    if (audioWorking) {
-      console.log('Audio test passed, continuing...');
-      // Test with actual sound
-      setTimeout(() => {
-        playAnnouncement('Starting challenge');
-      }, 500);
-    } else {
-      console.warn('Audio test failed, but continuing anyway...');
+    try {
+      // Force enable audio on continue click (user interaction)
+      await enableAudio();
+      
+      // Quick audio test in background (non-blocking)
+      testAudio().then(result => {
+        console.log('Background audio test result:', result);
+        if (result) {
+          // Play immediate confirmation sound
+          setTimeout(() => {
+            playAnnouncement('Audio enabled, starting challenge');
+          }, 200);
+        } else {
+          console.warn('Audio test failed, but continuing anyway');
+        }
+      }).catch(error => {
+        console.error('Background audio test error:', error);
+      });
+      
+      // Continue immediately without waiting for audio test
+      onContinue();
+      
+    } catch (error) {
+      console.error('Error in handleContinue:', error);
+      // Continue anyway even if audio fails
+      onContinue();
     }
-    
-    onContinue();
   };
 
   const handleBack = async (): Promise<void> => {
@@ -89,6 +131,11 @@ const SetupPage: React.FC<SetupPageProps> = ({
       // Enable audio on any user interaction
       await enableAudio();
       console.log('Audio enabled on back action');
+      
+      // Optional: Play back sound confirmation
+      setTimeout(() => {
+        playAnnouncement('Going back');
+      }, 100);
     } catch (error) {
       console.error('Error enabling audio on back:', error);
     }

@@ -10,7 +10,7 @@ import {
 import { FPSMonitor } from '../utils/FPSMonitor';
 import { PositionValidator } from '../utils/PositionValidator';
 import { SquatCounter } from '../utils/SquatCounter';
-import { playCountSound, playAnnouncement, stopAllAudio } from '../utils/AudioUtils';
+import { playCountSound, playAnnouncement, enableAudio, stopAllAudio } from '../utils/AudioUtils';
 
 // Import components
 import SetupPage from '../components/Squat/SetupPage';
@@ -195,6 +195,14 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setTimeRemaining(10);
       setProgressPercent(0);
       
+      // Trigger hydrate announcement immediately
+      setTimeout(() => {
+        if (!hasSpokenHydrate) {
+          playAnnouncement('Hydrate and Energize your body');
+          setHasSpokenHydrate(true);
+        }
+      }, 500);
+      
     } else if (phase === 'hydrate') {
       console.log('Transitioning from hydrate to go phase');
       takeScreenshot('hydrate');
@@ -203,6 +211,11 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setTimeout(() => {
         console.log('Setting phase to GO');
         setPhase('go');
+        
+        // Play GO announcement
+        setTimeout(() => {
+          playAnnouncement('GO!');
+        }, 100);
         
         setTimeout(() => {
           console.log('Setting phase to exercise');
@@ -224,6 +237,14 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         setPhase('recovery');
         setTimeRemaining(10);
         setProgressPercent(0);
+        
+        // Trigger recovery announcement immediately
+        setTimeout(() => {
+          if (!hasSpokenRecovery) {
+            playAnnouncement('Time to Recover and Repeat Stronger your body');
+            setHasSpokenRecovery(true);
+          }
+        }, 500);
       } else {
         console.log('Challenge completed, transitioning to grid');
         if (!hasSpokenCongratulations) {
@@ -253,6 +274,11 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         setPhase('go');
         setCurrentRound(2);
         
+        // Play GO announcement for round 2
+        setTimeout(() => {
+          playAnnouncement('Round Two, GO!');
+        }, 100);
+        
         setTimeout(() => {
           setPhase('exercise');
           setTimeRemaining(50);
@@ -263,7 +289,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         }, 2000);
       }, 1000);
     }
-  }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations]);
+  }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations, hasSpokenHydrate, hasSpokenRecovery]);
 
   // Pose detection with proper canvas sizing and positioning
   const detectPose = useCallback(async (): Promise<void> => {
@@ -342,7 +368,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           if (result.newCount) {
             setSquatCount(result.count);
             setTotalSquats(prev => prev + 1);
-            playCountSound(result.count);
+            
+            // Play count sound immediately without delay
+            playCountSound(result.count).catch(error => {
+              console.error('Error playing count sound:', error);
+            });
+            
             sessionStorage.setItem(`squats_round_${currentRound}`, result.count.toString());
           }
         }
@@ -378,31 +409,31 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   }, [phase]);
 
   useEffect(() => {
+    const handleUserInteraction = async (event: Event) => {
+      try {
+        await enableAudio();
+      } catch (error) {
+        console.error('Error re-enabling audio on interaction:', error);
+      }
+    };
+
+    const events = ['click', 'touchstart', 'keydown'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       stopAllAudio();
     };
   }, []);
-
-  // Audio announcements at start of hydrate and recovery phases
-  useEffect(() => {
-    if (phase === 'hydrate' && !hasSpokenHydrate) {
-      playAnnouncement('Hydrate and Energize your body');
-      setHasSpokenHydrate(true);
-    }
-  }, [phase, hasSpokenHydrate]);
-
-  useEffect(() => {
-    if (phase === 'recovery' && !hasSpokenRecovery) {
-      playAnnouncement('Time to Recover and Repeat Stronger your body');
-      setHasSpokenRecovery(true);
-    }
-  }, [phase, hasSpokenRecovery]);
-
-  useEffect(() => {
-    if (phase === 'go') {
-      playAnnouncement('GO!');
-    }
-  }, [phase]);
 
   // Progress bar calculation
   useEffect(() => {
@@ -455,10 +486,26 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     }
   }, [phase, handlePhaseComplete]);
 
-  const handleContinue = (): void => {
+  const handleContinue = async (): Promise<void> => {
+    console.log('Starting challenge with immediate audio activation...');
+    
     if (isFpsCompatible) {
-      setPhase('position-before-hydrate'); 
-      // setPhase('hydrate');
+      try {
+        // Force enable audio immediately when continue is clicked
+        await enableAudio();
+        console.log('Audio enabled successfully on continue');
+        
+        // Play immediate welcome sound
+        setTimeout(() => {
+          playAnnouncement('Challenge starting, get ready');
+        }, 300);
+        
+      } catch (error) {
+        console.error('Error enabling audio on continue:', error);
+      }
+      
+      setPhase('position-before-hydrate');
+      
       if (videoRef.current) {
         videoRef.current.play().catch(e => console.log('Video play error:', e));
       }
