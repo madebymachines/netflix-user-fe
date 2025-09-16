@@ -243,7 +243,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setTimeout(() => {
         setPhase('position-before-recovery');
         setProgressPercent(0);
-        positionValidatorRef.current.reset();
+        positionValidatorRef.current.reset();s
         setIsPositionConfirmed(false);
       }, 1000);
       
