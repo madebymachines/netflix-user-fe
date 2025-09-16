@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { Check, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, X, Volume2, VolumeX } from 'lucide-react';
 import YouTubeVideo from './YoutubeVideo';
-import { enableAudio, testAudio } from '../../utils/AudioUtils';
+import { enableAudio, testAudio, getAudioState, playAnnouncement } from '../../utils/AudioUtils';
 
 // Interface for SetupPage props
 interface SetupPageProps {
@@ -25,16 +25,60 @@ const SetupPage: React.FC<SetupPageProps> = ({
   YOUTUBE_VIDEO_ID 
 }) => {
   
-  // Enable audio when component mounts
-  // useEffect(() => {
-  //   enableAudio();
-  // }, []);
+  const [audioTestResult, setAudioTestResult] = useState<boolean | null>(null);
+  const [audioState, setAudioState] = useState<any>(null);
+  const [showAudioDebug, setShowAudioDebug] = useState<boolean>(false);
+
+  // Update audio state periodically
+  useEffect(() => {
+    const updateAudioState = () => {
+      const state = getAudioState();
+      setAudioState(state);
+    };
+
+    updateAudioState();
+    const interval = setInterval(updateAudioState, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleTestAudio = async (): Promise<void> => {
+    console.log('Testing audio manually...');
+    setAudioTestResult(null);
+    
+    try {
+      await enableAudio();
+      const result = await testAudio();
+      setAudioTestResult(result);
+      
+      if (result) {
+        // Test with actual announcement
+        setTimeout(() => {
+          playAnnouncement('Audio test successful');
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Manual audio test failed:', error);
+      setAudioTestResult(false);
+    }
+  };
 
   const handleContinue = async (): Promise<void> => {
     // Test audio before continuing
     console.log('Testing audio before starting challenge...');
     await enableAudio();
-    await testAudio();
+    const audioWorking = await testAudio();
+    
+    if (audioWorking) {
+      console.log('Audio test passed, continuing...');
+      // Test with actual sound
+      setTimeout(() => {
+        playAnnouncement('Starting challenge');
+      }, 500);
+    } else {
+      console.warn('Audio test failed, but continuing anyway...');
+    }
+    
     onContinue();
   };
 
@@ -114,6 +158,82 @@ const SetupPage: React.FC<SetupPageProps> = ({
             </div>
             <span className={`text-[30px] font-vancouver font-regular ${isFpsCompatible ? 'text-[#00FF51]' : 'text-[#FFFFFF]'}`}>FPS CHECK</span>
           </div>
+        </div>
+
+        {/* Audio Debug Section */}
+        <div className="mt-4 border border-gray-600 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                audioState?.speechSynthesisSupported && audioState?.hasUserInteracted
+                  ? 'border-[#00FF51]' 
+                  : 'border-[#FFFFFF]'
+              }`}>
+                {audioState?.speechSynthesisSupported && audioState?.hasUserInteracted ? 
+                  <Volume2 size={12} className="text-[#00FF51]" /> : 
+                  <VolumeX size={12} className="text-[#FFFFFF]" />
+                }
+              </div>
+              <span className={`text-[20px] font-vancouver font-regular ${
+                audioState?.speechSynthesisSupported && audioState?.hasUserInteracted
+                  ? 'text-[#00FF51]' 
+                  : 'text-[#FFFFFF]'
+              }`}>
+                AUDIO {audioState?.speechSynthesisSupported ? 'READY' : 'NOT READY'}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowAudioDebug(!showAudioDebug)}
+              className="text-gray-400 text-sm border border-gray-500 px-2 py-1 rounded"
+            >
+              {showAudioDebug ? 'Hide Debug' : 'Show Debug'}
+            </button>
+          </div>
+
+          <div className="flex gap-2 mb-2">
+            <button
+              onClick={handleTestAudio}
+              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded text-sm hover:bg-blue-700 transition-colors"
+            >
+              Test Audio
+            </button>
+            <div className={`flex items-center px-3 py-2 rounded text-sm ${
+              audioTestResult === true 
+                ? 'bg-green-600 text-white' 
+                : audioTestResult === false 
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-600 text-gray-300'
+            }`}>
+              {audioTestResult === true 
+                ? 'PASS' 
+                : audioTestResult === false 
+                  ? 'FAIL' 
+                  : 'NOT TESTED'
+              }
+            </div>
+          </div>
+
+          {showAudioDebug && audioState && (
+            <div className="bg-gray-900 rounded p-2 text-xs text-gray-300 max-h-40 overflow-y-auto">
+              <div className="font-bold text-white mb-1">Audio Debug Info:</div>
+              <div>User Interacted: {audioState.hasUserInteracted ? '✓' : '✗'}</div>
+              <div>Speech Synthesis: {audioState.speechSynthesisSupported ? '✓' : '✗'}</div>
+              <div>Audio Enabled: {audioState.isAudioEnabled ? '✓' : '✗'}</div>
+              <div>AudioContext State: {audioState.audioContextState}</div>
+              <div>Voices Available: {audioState.voicesCount}</div>
+              <div>Selected Voice: {audioState.selectedVoice}</div>
+              <div>Queue Length: {audioState.queueLength}</div>
+              <div>Is Mobile: {audioState.isMobile ? '✓' : '✗'}</div>
+              <div>Is iOS: {audioState.isIOS ? '✓' : '✗'}</div>
+              <div>Is Android: {audioState.isAndroid ? '✓' : '✗'}</div>
+              <div>Speaking: {audioState.speechSynthesisSpeaking ? '✓' : '✗'}</div>
+              <div>Pending: {audioState.speechSynthesisPending ? '✓' : '✗'}</div>
+              <div>Init Attempts: {audioState.audioInitializationAttempts}</div>
+              <div className="mt-1 text-gray-400 break-all">
+                UserAgent: {audioState.userAgent.substring(0, 60)}...
+              </div>
+            </div>
+          )}
         </div>
         
         {!isFpsCompatible && (
