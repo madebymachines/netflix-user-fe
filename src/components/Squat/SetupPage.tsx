@@ -26,13 +26,14 @@ const SetupPage: React.FC<SetupPageProps> = ({
 }) => {
   
   // Enable audio when component mounts
-  useEffect(() => {
-    enableAudio();
-  }, []);
+  // useEffect(() => {
+  //   enableAudio();
+  // }, []);
 
   const handleContinue = async (): Promise<void> => {
     // Test audio before continuing
     console.log('Testing audio before starting challenge...');
+    enableAudio();
     await testAudio();
     onContinue();
   };
