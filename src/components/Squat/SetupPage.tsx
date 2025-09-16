@@ -33,14 +33,22 @@ const SetupPage: React.FC<SetupPageProps> = ({
   const handleContinue = async (): Promise<void> => {
     // Test audio before continuing
     console.log('Testing audio before starting challenge...');
-    enableAudio();
+    await enableAudio();
     await testAudio();
     onContinue();
   };
 
-  const handleBack = (): void => {
-    // Enable audio on any user interaction
-    enableAudio();
+  const handleBack = async (): Promise<void> => {
+    console.log('Back button clicked, enabling audio...');
+    
+    try {
+      // Enable audio on any user interaction
+      await enableAudio();
+      console.log('Audio enabled on back action');
+    } catch (error) {
+      console.error('Error enabling audio on back:', error);
+    }
+    
     onBack();
   };
 
