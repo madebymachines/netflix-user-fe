@@ -21,6 +21,7 @@ export default function RootLayout({
         // className={`${urw.variable} ${gravtrac.variable} ${vancouver.variable} ${vancouverGothic.variable} bg-black antialiased`}
         className="bg-black antialiased"
       >
+        {/* {children} */}
         <DesktopGate>{children}</DesktopGate>
       </body>
     </html>
