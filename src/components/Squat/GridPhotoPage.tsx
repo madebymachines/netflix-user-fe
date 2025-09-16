@@ -469,8 +469,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       if (navigator.canShare && navigator.canShare({ files: filesArray })) {
         await navigator.share({
           files: filesArray,
-          title: 'My Squat Challenge Results',
-          text: `I completed ${totalSquats} squats in the challenge!`
+          // title: 'My Squat Challenge Results',
+          // text: `I completed ${totalSquats} squats in the challenge!`
         });
         console.log("Image shared successfully");
       } else {

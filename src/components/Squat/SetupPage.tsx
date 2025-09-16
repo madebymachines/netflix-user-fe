@@ -208,7 +208,7 @@ const SetupPage: React.FC<SetupPageProps> = ({
         </div>
 
         {/* Audio Debug Section */}
-        <div className="mt-4 border border-gray-600 rounded-lg p-3">
+        {/* <div className="mt-4 border border-gray-600 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -281,7 +281,7 @@ const SetupPage: React.FC<SetupPageProps> = ({
               </div>
             </div>
           )}
-        </div>
+        </div> */}
         
         {!isFpsCompatible && (
           <div 
