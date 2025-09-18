@@ -33,68 +33,72 @@ const nextConfig: NextConfig = {
   },
 
   // ==========================================================
-  // PENAMBAHAN SECURITY HEADERS UNTUK MENGATASI OWASP ZAP ALERTS
+  // SECURITY HEADERS CONFIGURATION
   // ==========================================================
-  // async headers() {
-  //   return [
-  //     {
-  //       source: '/(.*)',
-  //       headers: [
-  //         // Content Security Policy - Memperbaiki alert medium
-  //         {
-  //           key: 'Content-Security-Policy',
-  //           value: [
-  //             "default-src 'self'",
-  //             "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://www.youtube.com https://challenges.cloudflare.com",
-  //             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  //             "img-src 'self' data: blob: https://storage.googleapis.com https://img.youtube.com https://i.ytimg.com",
-  //             "font-src 'self' https://fonts.gstatic.com",
-  //             "connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://www.youtube.com https://netflix-be-1.onrender.com wss:",
-  //             "media-src 'self' https://www.youtube.com",
-  //             "worker-src 'self' blob:",
-  //             "child-src 'self' https://www.youtube.com",
-  //             "frame-src 'self' https://www.youtube.com",
-  //             "object-src 'none'",
-  //             "base-uri 'self'",
-  //             "form-action 'self'",
-  //             "frame-ancestors 'none'",
-  //             "upgrade-insecure-requests"
-  //           ].join('; ')
-  //         },
-  //         // X-Frame-Options - Mencegah clickjacking
-  //         {
-  //           key: 'X-Frame-Options',
-  //           value: 'DENY'
-  //         },
-  //         // X-Content-Type-Options - Mencegah MIME type sniffing
-  //         {
-  //           key: 'X-Content-Type-Options',
-  //           value: 'nosniff'
-  //         },
-  //         // Referrer-Policy - Mengontrol informasi referrer
-  //         {
-  //           key: 'Referrer-Policy',
-  //           value: 'strict-origin-when-cross-origin'
-  //         },
-  //         // Permissions-Policy - Mengontrol fitur browser
-  //         {
-  //           key: 'Permissions-Policy',
-  //           value: 'camera=*, microphone=*, geolocation=(), payment=(), usb=()'
-  //         },
-  //         // X-XSS-Protection - Perlindungan XSS (meskipun sudah deprecated, masih berguna untuk browser lama)
-  //         {
-  //           key: 'X-XSS-Protection',
-  //           value: '1; mode=block'
-  //         },
-  //         // Strict-Transport-Security - Memaksa HTTPS
-  //         {
-  //           key: 'Strict-Transport-Security',
-  //           value: 'max-age=31536000; includeSubDomains'
-  //         }
-  //       ],
-  //     },
-  //   ];
-  // },
+  async headers() {
+    return [
+      {
+        // Terapkan security headers ke semua route
+        source: '/(.*)',
+        headers: [
+          {
+            // HSTS - HTTP Strict Transport Security
+            // Memaksa browser untuk selalu menggunakan HTTPS
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          },
+          {
+            // X-Frame-Options - Mencegah clickjacking
+            // Mencegah website diembed dalam iframe di situs lain
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            // X-Content-Type-Options - Mencegah MIME-sniffing attacks
+            // Mencegah browser menebak tipe konten yang berbeda dari yang dideklarasikan
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            // X-DNS-Prefetch-Control - Kontrol DNS prefetching
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
+          },
+          {
+            // Referrer-Policy - Kontrol informasi referrer
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
+          },
+          {
+            // Permissions-Policy - Kontrol browser features
+            key: 'Permissions-Policy',
+            value: 'camera=*, microphone=*, geolocation=()'
+          },
+          {
+            // Content Security Policy (CSP)
+            // Policy yang sangat permissive untuk MediaPipe dan external resources
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://storage.googleapis.com https://*.youtube.com https://*.ytimg.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https: http:",
+              "media-src 'self' data: blob: https: mediastream:",
+              "connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://netflix-be-1.onrender.com wss: ws:",
+              "worker-src 'self' blob:",
+              "child-src 'self' blob: https://*.youtube.com",
+              "frame-src 'self' https://*.youtube.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'"
+            ].join('; ')
+          }
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
