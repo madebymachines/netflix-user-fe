@@ -2,13 +2,11 @@
 
 import Image from "next/image";
 import { ChevronsDown } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef } from "react";
 import MobileShell from "@/components/MobileShell";
-import Header from "@/components/Header";
-import OverlayMenu from "@/components/OverlayMenu";
 import { useRouter } from "next/navigation";
 
-const CONTENT_H = 590;
+const CONTENT_H = 640;
 const BALL_H = 420;
 const GAP_AFTER_BALL = 20;
 const BTN_H = 40;
@@ -18,36 +16,13 @@ const BOTTLE_TOP = 240;
 const SCROLL_CUE_TOP = BALL_H + GAP_AFTER_BALL + BTN_H + 10;
 
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = prev || "";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuOpen]);
-
   const moreRef = useRef<HTMLDivElement | null>(null);
   const goMore = () => moreRef.current?.scrollIntoView({ behavior: "smooth" });
 
-  const menuItems = useMemo(
-    () => [
-      { label: "Home", href: "/" },
-      { label: "Sign In", href: "/sign-in" },
-      { label: "Leaderboard", href: "/leaderboard" },
-    ],
-    []
-  );
-
   return (
     <>
-      <MobileShell
-        header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
-        contentHeight={CONTENT_H}
-      >
+      <MobileShell contentHeight={CONTENT_H}>
         {/* BG bola (tinggi tetap) */}
         <div
           className="absolute top-0 left-0 w-full"
@@ -100,7 +75,7 @@ export default function LandingPage() {
             style={{ top: BALL_H + GAP_AFTER_BALL }}
           >
             <button
-              onClick={() => router.push("/sign-in")}
+              onClick={() => router.push("/challenge")}
               className="h-[40px] w-[160px] rounded-full text-white font-bold text-[14px] tracking-wide
                 shadow-[0_10px_24px_rgba(0,0,0,.45)]
                 bg-[radial-gradient(120%_120%_at_50%_10%,#ff6b6b_0%,#d90429_40%,#b00020_70%,#7a0015_100%)]
@@ -121,14 +96,6 @@ export default function LandingPage() {
             <ChevronsDown className="w-7 h-7 animate-bounce" />
           </button>
         </div>
-
-        {/* Overlay menu */}
-        <OverlayMenu
-          open={menuOpen}
-          onClose={() => setMenuOpen(false)}
-          items={menuItems}
-          contentHeight={CONTENT_H}
-        />
       </MobileShell>
 
       {/* Section bawah (lebar responsif, tinggi bebas) */}

@@ -1,16 +1,13 @@
-import Header from "./Header";
-
 type Props = {
   children: React.ReactNode;
   header?: React.ReactNode;
-  contentHeight?: number; // kalau diisi → fixed height
+  contentHeight?: number;
   dimAll?: boolean;
   overlayChildren?: React.ReactNode;
 };
 
 export default function MobileShell({
   children,
-  header,
   contentHeight,
   dimAll = false,
   overlayChildren,
@@ -24,11 +21,6 @@ export default function MobileShell({
         className="relative w-full max-w-screen-sm md:max-w-screen-md lg:max-w-screen-lg"
         style={fixed ? { height: stageH } : undefined}
       >
-        {/* Header full width */}
-        <div className="absolute top-0 left-0 right-0 z-30">
-          {header ?? <Header />}
-        </div>
-
         {/* Konten di bawah header */}
         <section
           className={`relative mt-[50px] ${fixed ? "overflow-hidden" : ""}`}
