@@ -1,32 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import MobileShell from "@/components/MobileShell";
-import Header from "@/components/Header";
-import OverlayMenu from "@/components/OverlayMenu";
 
 export default function PrivacyPolicyPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [menuOpen]);
-
-  const guestMenu = [
-    { label: "Home", href: "/" },
-    { label: "Sign In", href: "/sign-in" },
-    { label: "Register", href: "/register" },
-  ];
-
   return (
-    <MobileShell
-      header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
-    >
+    <MobileShell>
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
@@ -400,20 +378,7 @@ export default function PrivacyPolicyPage() {
             </p>
           </div>
         </div>
-
-        <Link
-          href="/register"
-          className="block mt-4 mx-auto w-full rounded-md border border-white/30 bg-black/60 py-3 text-center font-bold"
-        >
-          Back to Sign Up
-        </Link>
       </div>
-
-      <OverlayMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        items={guestMenu}
-      />
     </MobileShell>
   );
 }

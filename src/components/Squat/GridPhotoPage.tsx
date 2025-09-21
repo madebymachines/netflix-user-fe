@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
 import { prepareActivitySubmission } from '@/utils/ActivityUtils';
 
 // Define interfaces for props
@@ -30,9 +29,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
   const [gridImage, setGridImage] = useState<string | null>(null);
   const [isSubmissionComplete, setIsSubmissionComplete] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  
-  // Get auth store functions
-  const { submitActivity, isSubmittingActivity, stats } = useAuthStore();
 
   useEffect(() => {
     generateGridImage();
@@ -49,8 +45,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
         round2Count,
         'INDIVIDUAL'
       );
-
-      await submitActivity(activityData);
       setIsSubmissionComplete(true);
       
       console.log('Activity submitted successfully');
@@ -443,7 +437,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
   useEffect(() => {
     const autoSubmitActivity = async () => {
-      if (gridImage && !isSubmissionComplete && !isSubmittingActivity) {
+      if (gridImage && !isSubmissionComplete) {
         await handleSubmitActivity();
       }
     };
