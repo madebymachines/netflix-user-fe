@@ -75,21 +75,25 @@ export default function LandingPage() {
             zIndex: 10
           }}
         >
-          <Image
-            src="/images/unlock.png"
-            alt="UNLOCK NOW"
-            width={160}
-            height={40}
+          <button
             onClick={() => router.push("/challenge")}
             className="cursor-pointer hover:scale-105 transition-transform 
                       drop-shadow-[0_10px_24px_rgba(0,0,0,.45)]
-                      sm:w-[170px] sm:h-[44px]"
-          />
+                      bg-transparent border-none p-0 touch-manipulation"
+          >
+            <Image
+              src="/images/unlock.png"
+              alt="UNLOCK NOW"
+              width={160}
+              height={40}
+              className="sm:w-[170px] sm:h-[44px]"
+            />
+          </button>
         </div>
       </div>
 
       {/* Rewards Section */}
-      <section className="w-full bg-black mt-15">
+      <section className="w-full bg-black mt-5">
         <div className="max-w-screen-md mx-auto px-4 py-8">
           
           {/* Title */}
