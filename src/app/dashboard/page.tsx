@@ -59,9 +59,7 @@ export default function DashboardPage() {
       try {
         const { data } = await api.get<PurchaseStatusResponse>(
           "/user/purchase-verification/status",
-          {
-            _skipAuthRefresh: true,
-          }
+          { _skipAuthRefresh: true }
         );
         if (!active) return;
         if (data.status === "REJECTED") {
@@ -91,16 +89,14 @@ export default function DashboardPage() {
     };
   }, [menuOpen]);
 
-  const genderPlaceholder =
-    (user?.gender as "MALE" | "FEMALE") === "FEMALE"
-      ? "/images/placeholder_female.png"
-      : "/images/placeholder_male.png";
+  // === Perubahan: tidak ada cek gender; default selalu placeholder_male.png ===
+  const fallbackPhoto = "/images/placeholder_male.png";
 
+  // === Perubahan: tampilkan username (bukan name) ===
   const userDisplayData = {
-    name: user?.name ?? "User",
     username: user?.username ?? "username",
     points: stats?.totalPoints ?? 0,
-    photoUrl: user?.profilePictureUrl || genderPlaceholder,
+    photoUrl: user?.profilePictureUrl || fallbackPhoto,
   };
 
   const levelAssets = getLevelAssets(userDisplayData.points);
@@ -203,7 +199,7 @@ export default function DashboardPage() {
 
           <div className="flex-1 h-[116px] flex flex-col justify-center">
             <div className="font-heading text-[12px] tracking-[.02em] leading-none">
-              {userDisplayData.name}
+              {userDisplayData.username}
             </div>
 
             <div className="flex items-end gap-2">

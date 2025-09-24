@@ -11,26 +11,10 @@ import { useAuthStore } from "@/store/authStore";
 import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 
-type Gender = "MALE" | "FEMALE" | "";
 type FormState = {
-  fullName: string;
   username: string;
   email: string;
-  phoneDigits: string;
-  gender: Gender;
 };
-
-const DIAL_CODE = "+60";
-const normalizeDigits = (raw?: string) => String(raw || "").replace(/\D+/g, "");
-const stripDialCode = (raw?: string) => {
-  const digits = normalizeDigits(raw);
-  return digits.startsWith("60") ? digits.slice(2) : digits;
-};
-
-const genderPlaceholder = (g?: "MALE" | "FEMALE" | "") =>
-  g === "FEMALE"
-    ? "/images/placeholder_female.png"
-    : "/images/placeholder_male.png";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -43,6 +27,7 @@ export default function ProfilePage() {
     msg: string;
     type: "success" | "error";
   } | null>(null);
+
   const showToast = (
     msg: string,
     type: "success" | "error" = "success",
@@ -66,11 +51,8 @@ export default function ProfilePage() {
   // ==== Form state ====
   const initialFormState = useMemo<FormState>(
     () => ({
-      fullName: user?.name ?? "",
       username: user?.username ?? "",
       email: user?.email ?? "",
-      phoneDigits: stripDialCode(user?.phoneNumber ?? ""),
-      gender: (user?.gender as Gender) ?? "",
     }),
     [user]
   );
@@ -142,25 +124,11 @@ export default function ProfilePage() {
   const onUpdate = async () => {
     if (!user) return;
 
-    if (form.phoneDigits && !/^\d{7,9}$/.test(form.phoneDigits)) {
-      showToast("Phone Number must be 7–9 digits", "error");
-      return;
-    }
-
     setIsUpdating(true);
     try {
-      const payload: {
-        name: string;
-        username: string;
-        phoneNumber?: string;
-        gender?: "MALE" | "FEMALE";
-      } = {
-        name: form.fullName.trim(),
+      const payload = {
         username: form.username.trim(),
       };
-      if (form.phoneDigits)
-        payload.phoneNumber = `${DIAL_CODE}${form.phoneDigits}`;
-      if (form.gender) payload.gender = form.gender as "MALE" | "FEMALE";
 
       await api.put("/user/me", payload);
       await checkAuth();
@@ -194,12 +162,11 @@ export default function ProfilePage() {
   }
 
   const isBlobPreview = avatarUrl.startsWith("blob:");
-  const effectiveGender = (form.gender ||
-    (user?.gender as Gender) ||
-    "") as Gender;
+  const fallbackPhoto = "/images/placeholder_male.png";
+
   const avatarSrc = isBlobPreview
     ? avatarUrl
-    : user?.profilePictureUrl || genderPlaceholder(effectiveGender);
+    : user?.profilePictureUrl || fallbackPhoto;
 
   return (
     <MobileShell
@@ -220,21 +187,21 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* BG */}
+      {/* Background full */}
       <div className="absolute inset-0">
         <Image
           src="/images/ball.png"
           alt=""
           fill
           sizes="100vw"
-          style={{ objectFit: "cover", objectPosition: "top" }}
+          style={{ objectFit: "cover" }}
           className="opacity-25"
           priority
         />
         <div className="absolute inset-0 bg-black/15" />
       </div>
 
-      <div className="relative z-10 w-full px-5 pt-4 pb-8 text-white">
+      <div className="relative z-10 w-full px-5 pt-4 pb-8 text-white min-h-screen">
         <h1 className="font-heading text-[28px] tracking-[.02em] mb-3">
           Profile
         </h1>
@@ -295,48 +262,11 @@ export default function ProfilePage() {
         {/* Form */}
         <div className="space-y-4">
           <TextField
-            label="Full Name"
-            value={form.fullName}
-            onChange={(v) => setForm((s) => ({ ...s, fullName: v }))}
-            required
-          />
-          <TextField
             label="Username"
             value={form.username}
             onChange={(v) => setForm((s) => ({ ...s, username: v }))}
             required
           />
-
-          {/* Gender */}
-          <div>
-            <div className="text-[12px] mb-1 opacity-80">Gender</div>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center gap-2 border-b border-white/30 pb-2">
-                <input
-                  type="radio"
-                  value="MALE"
-                  checked={form.gender === "MALE"}
-                  onChange={() =>
-                    setForm((s) => ({ ...s, gender: "MALE" as Gender }))
-                  }
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Male</span>
-              </label>
-              <label className="flex items-center gap-2 border-b border-white/30 pb-2">
-                <input
-                  type="radio"
-                  value="FEMALE"
-                  checked={form.gender === "FEMALE"}
-                  onChange={() =>
-                    setForm((s) => ({ ...s, gender: "FEMALE" as Gender }))
-                  }
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Female</span>
-              </label>
-            </div>
-          </div>
 
           <TextField
             label="Email"
@@ -345,16 +275,6 @@ export default function ProfilePage() {
             type="email"
             required
             disabled
-          />
-
-          <PhoneField
-            label="Phone Number"
-            dialCode={DIAL_CODE}
-            value={form.phoneDigits}
-            onChange={(digits) =>
-              setForm((s) => ({ ...s, phoneDigits: digits }))
-            }
-            required
           />
         </div>
 
@@ -419,49 +339,5 @@ function TextField({
         required={required}
       />
     </label>
-  );
-}
-
-function PhoneField({
-  label,
-  value,
-  onChange,
-  dialCode = "+60",
-  required = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (digits: string) => void;
-  dialCode?: string;
-  required?: boolean;
-}) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = normalizeDigits(e.target.value).slice(0, 9);
-    onChange(digits);
-  };
-
-  return (
-    <div>
-      <div className="text-[12px] mb-1 opacity-80">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
-          {dialCode}
-        </span>
-        <input
-          value={value}
-          onChange={handleChange}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          maxLength={9}
-          className="flex-1 bg-transparent border-b border-white/30 px-0 py-2 placeholder-white/40
-                     focus:outline-none focus:border-white text-[14px]"
-          placeholder="Enter your phone number (7–9 digits)"
-          required={required}
-        />
-      </div>
-    </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,24 +40,12 @@ function isValidatorErrArray(val: unknown): val is ValidatorError[] {
   return Array.isArray(val) && val.every((x) => isRecord(x));
 }
 
-const normalizeNumber = (raw?: string) => {
-  const digits = String(raw || "").replace(/\D+/g, "");
-  return digits.replace(/^0+/, "");
-};
-
 const COUNTRY_CODE = "MY";
-const DIAL_CODE = "+60";
 
 const registerSchema = z
   .object({
-    name: z.string().min(1, "Full Name is required"),
     username: z.string().min(1, "Username is required"),
     email: z.string().email("Invalid email address"),
-    gender: z.enum(["MALE", "FEMALE"]),
-    phoneNumber: z
-      .string()
-      .regex(/^\d{7,9}$/, "Phone number must be 7–9 digits")
-      .optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
     agree: z.boolean().refine((val) => val === true, {
@@ -148,7 +136,7 @@ export default function RegisterPage() {
     reset,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { agree: false, gender: "MALE" },
+    defaultValues: { agree: false },
     mode: "onChange",
   });
 
@@ -160,7 +148,7 @@ export default function RegisterPage() {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as Partial<RegisterFormInputs>;
-        reset({ agree: false, gender: "MALE", ...draft });
+        reset({ agree: false, ...draft });
       }
     } catch {}
   }, [reset]);
@@ -168,24 +156,14 @@ export default function RegisterPage() {
   // Save draft
   useEffect(() => {
     const sub = watch((value) => {
-      const {
-        name,
-        username,
-        email,
-        gender,
-        phoneNumber,
-        password,
-        confirmPassword,
-        agree,
-      } = value as RegisterFormInputs;
+      const { username, email, password, confirmPassword, agree } =
+        value as RegisterFormInputs;
       sessionStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
           name,
           username,
           email,
-          gender,
-          phoneNumber,
           password,
           confirmPassword,
           agree,
@@ -214,14 +192,9 @@ export default function RegisterPage() {
 
     try {
       await axios.post(`${API_BASE}/auth/register`, {
-        name: data.name,
         username: data.username,
         email: data.email,
         password: data.password,
-        gender: data.gender,
-        phoneNumber: data.phoneNumber
-          ? `${DIAL_CODE}${normalizeNumber(data.phoneNumber)}`
-          : undefined,
         country: COUNTRY_CODE,
       });
 
@@ -277,21 +250,6 @@ export default function RegisterPage() {
         <h1 className="text-[28px] font-extrabold mb-6">Sign Up</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Full Name */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">
-              Full Name
-            </label>
-            <input
-              {...register("name")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
-              placeholder="Enter your full name"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-            )}
-          </div>
-
           {/* Username */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
@@ -320,61 +278,6 @@ export default function RegisterPage() {
             {errors.email && (
               <p className="text-red-500 text-xs mt-1">
                 {errors.email.message}
-              </p>
-            )}
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">Gender</label>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
-                <input
-                  type="radio"
-                  value="MALE"
-                  {...register("gender")}
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Male</span>
-              </label>
-              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
-                <input
-                  type="radio"
-                  value="FEMALE"
-                  {...register("gender")}
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Female</span>
-              </label>
-            </div>
-            {errors.gender && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.gender.message}
-              </p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">
-              Phone Number
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
-                {DIAL_CODE}
-              </span>
-              <input
-                {...register("phoneNumber")}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={9}
-                className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
-                placeholder="Enter your phone number"
-              />
-            </div>
-            {errors.phoneNumber && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.phoneNumber.message}
               </p>
             )}
           </div>
@@ -426,8 +329,11 @@ export default function RegisterPage() {
               By creating an account, you agree on our{" "}
               <a href="/privacy-policy" className="underline">
                 privacy policy
+              </a>{" "}
+              &{" "}
+              <a href="/t&c" className="underline">
+                T&C
               </a>
-              .
             </span>
           </label>
           {errors.agree && (
