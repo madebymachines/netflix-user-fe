@@ -10,9 +10,9 @@ import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 import * as htmlToImage from "html-to-image";
 
-type TimespanUI = "All Time" | "Monthly";
-const TIMESPAN_TO_QUERY: Record<TimespanUI, "alltime" | "monthly"> = {
-  "All Time": "alltime",
+type TimespanUI = "Weekly" | "Monthly";
+const TIMESPAN_TO_QUERY: Record<TimespanUI, "weekly" | "monthly"> = {
+  Weekly: "weekly",
   Monthly: "monthly",
 };
 
@@ -301,13 +301,25 @@ function isShareAbort(err: unknown): boolean {
 
 export default function LeaderboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [period, setPeriod] = useState<TimespanUI>("All Time");
+  const [period, setPeriod] = useState<TimespanUI>("Weekly");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { user, isLoading, checkAuth } = useAuthStore();
   const isLoggedIn = !!user;
+
+  const BUTTON_LABEL: Record<TimespanUI, string> = {
+    Weekly: "Weekly Momentum",
+    Monthly: "Monthly",
+  };
+
+  const PERIOD_DESC: Record<TimespanUI, string> = {
+    Weekly:
+      "Weekly Momentum is calculated by the number of daily login streaks in a week, multiplied by the total points users collected.",
+    Monthly:
+      "Monthly Leaderboard is calculated based on the total points collected by users over 30 days.",
+  };
 
   useEffect(() => {
     checkAuth({ allowRefresh: false });
@@ -463,9 +475,9 @@ export default function LeaderboardPage() {
           LEADERBOARD
         </h1>
 
-        {/* Filters: All Time / Monthly */}
+        {/* Filters */}
         <div className="grid grid-cols-2 gap-2 w-[320px] mx-auto mt-3">
-          {(["All Time", "Monthly"] as const).map((it) => {
+          {(["Weekly", "Monthly"] as const).map((it) => {
             const active = period === it;
             return (
               <button
@@ -475,11 +487,18 @@ export default function LeaderboardPage() {
                   active ? "bg-red-600" : "bg-black/40"
                 }`}
               >
-                {it.toUpperCase()}
+                {BUTTON_LABEL[it].toUpperCase()}
               </button>
             );
           })}
         </div>
+
+        <p
+          key={period}
+          className="w-[320px] mx-auto mt-3 text-center text-[11px] leading-snug opacity-80"
+        >
+          {PERIOD_DESC[period]}
+        </p>
 
         {errorMsg && (
           <div className="w-[320px] mx-auto mt-3 p-2 rounded-md bg-red-500/20 border border-red-500 text-red-200 text-[12px]">
