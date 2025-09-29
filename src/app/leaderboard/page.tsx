@@ -34,6 +34,14 @@ type LeaderboardResponse = {
   leaderboard: Row[];
 };
 
+type PurchaseStatus = "NOT_VERIFIED" | "PENDING" | "REJECTED" | "APPROVED";
+type PurchaseStatusResponse = {
+  status: PurchaseStatus;
+  reason?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+};
+
 function frameForPoints(points: number | null | undefined): string {
   const p = Math.max(0, Number(points ?? 0));
   if (p >= 6000) return "/images/f_legendary.png";
@@ -303,6 +311,7 @@ export default function LeaderboardPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<TimespanUI>("Weekly");
   const [rows, setRows] = useState<Row[]>([]);
+  const [showPendingModal, setShowPendingModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -324,6 +333,35 @@ export default function LeaderboardPage() {
   useEffect(() => {
     checkAuth({ allowRefresh: false });
   }, []); // eslint-disable-line
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    if (showPendingModal) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showPendingModal]);
+
+  // setelah checkAuth dipanggil, cek status purchase
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (!isLoggedIn) return;
+        const { data } = await api.get<PurchaseStatusResponse>(
+          "/user/purchase-verification/status",
+          { _skipAuthRefresh: true }
+        );
+        if (!active) return;
+        if (data.status === "PENDING") setShowPendingModal(true);
+      } catch {
+        // leaderboard
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -607,6 +645,58 @@ export default function LeaderboardPage() {
         onClose={() => setMenuOpen(false)}
         items={menuItems}
       />
+
+      {/* Modal: Purchase pending */}
+      {showPendingModal && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70">
+          <div className="relative w-[86%] max-w-[360px] rounded-xl bg-white px-5 pb-6 pt-5 text-black shadow-2xl">
+            {/* Close */}
+            <button
+              aria-label="Close"
+              onClick={() => setShowPendingModal(false)}
+              className="absolute right-3 top-3 text-black/70 hover:text-black"
+            >
+              {/* X icon simple */}
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                fill="none"
+                strokeWidth="2"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-center font-heading text-[22px] font-semibold">
+              Notification
+            </h3>
+
+            {/* Icon besar */}
+            <div className="mx-auto mt-3 mb-3 grid h-16 w-16 place-items-center rounded-xl bg-black/5">
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 24 24"
+                stroke="#ef4444"
+                fill="none"
+                strokeWidth="1.6"
+              >
+                <rect x="4" y="4" width="16" height="13" rx="3" stroke="#000" />
+                <circle cx="18" cy="18" r="3" fill="none" stroke="#ef4444" />
+                <path d="M18 16v2h2" stroke="#ef4444" />
+              </svg>
+            </div>
+
+            <p className="text-center text-[13px] leading-5 text-black/80">
+              Your name isn’t on the leaderboard yet because the system is still
+              verifying your receipt. Once it’s verified, all points you’ve
+              earned will be added to the leaderboard.
+            </p>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }
