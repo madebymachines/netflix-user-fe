@@ -42,22 +42,54 @@ function isValidatorErrArray(val: unknown): val is ValidatorError[] {
 
 const COUNTRY_CODE = "MY";
 
+const hasLetter = /[A-Za-z]/;
+const hasNumber = /\d/;
+const hasSymbol = /[^A-Za-z0-9]/;
+
 const registerSchema = z
   .object({
     username: z.string().min(1, "Username is required"),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters long")
+      .refine((v) => hasLetter.test(v), {
+        message: "Password must contain at least one letter (A–Z or a–z)",
+      })
+      .refine((v) => hasNumber.test(v), {
+        message: "Password must contain at least one number (0–9)",
+      })
+      .refine((v) => hasSymbol.test(v), {
+        message: "Password must contain at least one symbol (e.g. !@#$%^&*)",
+      }),
     confirmPassword: z.string(),
     agree: z.boolean().refine((val) => val === true, {
       message: "You must agree to the privacy policy",
     }),
   })
   .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
+
+type PayloadWithDetails = { details: JoiDetail[] };
+type PayloadWithErrors = { errors: ValidatorError[] };
+
+function hasDetails(payload: unknown): payload is PayloadWithDetails {
+  return (
+    isRecord(payload) &&
+    Array.isArray((payload as Record<string, unknown>).details)
+  );
+}
+
+function hasErrors(payload: unknown): payload is PayloadWithErrors {
+  return (
+    isRecord(payload) &&
+    Array.isArray((payload as Record<string, unknown>).errors)
+  );
+}
 
 function extractServerErrors<TFields>(
   payload: unknown,
@@ -82,7 +114,7 @@ function extractServerErrors<TFields>(
     if (mapKnown) result.fieldErrors.push(...mapKnown(msg));
   }
 
-  if (isJoiDetailArray(payload.details)) {
+  if (hasDetails(payload) && isJoiDetailArray(payload.details)) {
     payload.details.forEach((e) => {
       const pathRaw = Array.isArray(e.path) ? e.path[0] : e.path;
       if (typeof pathRaw === "string") {
@@ -97,7 +129,7 @@ function extractServerErrors<TFields>(
     }
   }
 
-  if (isValidatorErrArray(payload.errors)) {
+  if (hasErrors(payload) && isValidatorErrArray(payload.errors)) {
     payload.errors.forEach((e) => {
       const p = e.path || e.param || e.field;
       const m = e.msg || e.message || "Invalid value";
@@ -141,6 +173,7 @@ export default function RegisterPage() {
   });
 
   const agreeChecked = watch("agree", false);
+  const pwd = watch("password", "");
 
   // Restore draft
   useEffect(() => {
@@ -240,6 +273,11 @@ export default function RegisterPage() {
     }
   };
 
+  const policyOkLen = pwd.length >= 8;
+  const policyOkLetter = hasLetter.test(pwd);
+  const policyOkNumber = hasNumber.test(pwd);
+  const policyOkSymbol = hasSymbol.test(pwd);
+
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
@@ -293,11 +331,34 @@ export default function RegisterPage() {
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter new password"
             />
+            {/* Pesan error dari Zod */}
             {errors.password && (
               <p className="text-red-500 text-xs mt-1">
                 {errors.password.message}
               </p>
             )}
+
+            {/* Checklist live (opsional) */}
+            <ul className="mt-2 text-[11px] space-y-1">
+              <li className={policyOkLen ? "text-green-400" : "text-white/70"}>
+                {policyOkLen ? "✔" : "•"} At least 8 characters
+              </li>
+              <li
+                className={policyOkLetter ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkLetter ? "✔" : "•"} Contains a letter (A–Z / a–z)
+              </li>
+              <li
+                className={policyOkNumber ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkNumber ? "✔" : "•"} Contains a number (0–9)
+              </li>
+              <li
+                className={policyOkSymbol ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkSymbol ? "✔" : "•"} Contains a symbol (!@#$%^&*)
+              </li>
+            </ul>
           </div>
 
           {/* Confirm Password */}
@@ -332,7 +393,7 @@ export default function RegisterPage() {
               </a>{" "}
               &{" "}
               <a href="/t&c" className="underline">
-                T&C
+                T&amp;C
               </a>
             </span>
           </label>
