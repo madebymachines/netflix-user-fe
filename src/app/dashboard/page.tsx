@@ -89,15 +89,32 @@ export default function DashboardPage() {
     };
   }, [menuOpen]);
 
-  // === Perubahan: tidak ada cek gender; default selalu placeholder_male.png ===
+  useEffect(() => {
+    if (user?.profilePictureUrl?.startsWith("s3://")) {
+      (async () => {
+        try {
+          const { data } = await api.get("/user/me");
+          useAuthStore.getState().setUser(data.profile);
+        } catch {}
+      })();
+    }
+  }, [user?.profilePictureUrl]);
+
   const fallbackPhoto = "/images/placeholder_male.png";
+
+  function normalizeImgSrc(url?: string | null) {
+    if (!url) return fallbackPhoto;
+    if (url.startsWith("s3://") || url.startsWith("ipfs://"))
+      return fallbackPhoto;
+    return url;
+  }
 
   // === Perubahan: tampilkan username (bukan name) ===
   const userDisplayData = {
     username: user?.username ?? "username",
     points: stats?.totalPoints ?? 0,
-    photoUrl: user?.profilePictureUrl || fallbackPhoto,
   };
+  const photoSrc = normalizeImgSrc(user?.profilePictureUrl);
 
   const levelAssets = getLevelAssets(userDisplayData.points);
 
@@ -166,7 +183,8 @@ export default function DashboardPage() {
           <div className="relative w-[116px] h-[116px] shrink-0">
             <div className="absolute inset-[18%] overflow-hidden [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]">
               <Image
-                src={userDisplayData.photoUrl}
+                key={photoSrc}
+                src={photoSrc}
                 alt="User"
                 fill
                 sizes="116px"
