@@ -10,11 +10,8 @@ import { Upload, Trash2, AlertTriangle } from "lucide-react";
 import api from "@/lib/axios";
 import { isAxiosError } from "axios";
 
-type Method = "RECEIPT" | "MEMBER_GYM";
-
 export default function VerifyPurchasePage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [method, setMethod] = useState<Method>("RECEIPT");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +24,6 @@ export default function VerifyPurchasePage() {
   const sp = useSearchParams();
   const rejected = sp.get("rejected") === "1";
   const rejectMsg = sp.get("msg") || "";
-
-  useEffect(() => {
-    const m = (sp.get("method") as Method) || "RECEIPT";
-    setMethod(m);
-    clearFile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp]);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -76,11 +66,6 @@ export default function VerifyPurchasePage() {
     });
   };
 
-  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
-  };
-
   const clearFile = () => {
     if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
     setFile(null);
@@ -97,7 +82,7 @@ export default function VerifyPurchasePage() {
 
       const fd = new FormData();
       fd.append("receiptImage", file);
-      fd.append("type", method); // RECEIPT | MEMBER_GYM
+      fd.append("type", "RECEIPT"); // selalu RECEIPT
 
       await api.post("/user/purchase-verification", fd, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -114,25 +99,13 @@ export default function VerifyPurchasePage() {
     }
   };
 
-  const title =
-    method === "RECEIPT"
-      ? rejected
-        ? "Re-Verify Your Purchase!"
-        : "Verify Your Purchase!"
-      : "Verify Your Membership!";
+  const title = rejected ? "Re-Verify Your Purchase!" : "Verify Your Purchase!";
+  const desc = rejected
+    ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
+    : "To continue, please upload full receipt / proof of purchase of 100PLUS Drink below.";
 
-  const desc =
-    method === "RECEIPT"
-      ? rejected
-        ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
-        : "To continue, please upload full receipt / proof of purchase of 100PLUS Drink below."
-      : "To continue, please upload a photo of the front of your gym membership card.";
-
-  const uploadLabel =
-    method === "RECEIPT" ? "Upload Receipt Here" : "Upload Card Photo Here";
-
-  const maxDrop =
-    method === "MEMBER_GYM" ? (rejected ? 230 : 260) : rejected ? 270 : 300;
+  const uploadLabel = "Upload Receipt Here";
+  const maxDrop = rejected ? 270 : 300;
 
   return (
     <MobileShell
@@ -159,42 +132,8 @@ export default function VerifyPurchasePage() {
         className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white flex flex-col min-h-full"
       >
         <p className="mb-3 text-center text-[11px] opacity-80">
-          Choose Method to Verified Your Account!
+          Verify Your Account via Product Purchase
         </p>
-
-        {/* Toggle buttons */}
-        <div className="mx-auto mb-5 flex w-full max-w-[320px] gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("RECEIPT");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "RECEIPT"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            PRODUCT PURCHASE
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("MEMBER_GYM");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "MEMBER_GYM"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            GYM MEMBER
-          </button>
-        </div>
 
         {/* Title & description */}
         <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
@@ -261,18 +200,6 @@ export default function VerifyPurchasePage() {
             />
           </div>
         </div>
-
-        {method === "MEMBER_GYM" && (
-          <>
-            <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
-            <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
-              This verification is only for member of <br />
-              <span className="font-extrabold text-[20px]">
-                Fitness First or Celebrity Fitness
-              </span>
-            </p>
-          </>
-        )}
 
         {/* Error */}
         {error && (
