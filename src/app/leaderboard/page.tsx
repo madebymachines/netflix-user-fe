@@ -323,13 +323,6 @@ export default function LeaderboardPage() {
     Monthly: "Monthly",
   };
 
-  const PERIOD_DESC: Record<TimespanUI, string> = {
-    Weekly:
-      "Weekly is calculated by the number of daily login streaks in a week, multiplied by the total points users collected.",
-    Monthly:
-      "Monthly Leaderboard is calculated based on the total points collected by users over 30 days.",
-  };
-
   useEffect(() => {
     checkAuth({ allowRefresh: false });
   }, []); // eslint-disable-line
@@ -530,13 +523,6 @@ export default function LeaderboardPage() {
             );
           })}
         </div>
-
-        <p
-          key={period}
-          className="w-[320px] mx-auto mt-3 text-center text-[11px] leading-snug opacity-80"
-        >
-          {PERIOD_DESC[period]}
-        </p>
 
         {errorMsg && (
           <div className="w-[320px] mx-auto mt-3 p-2 rounded-md bg-red-500/20 border border-red-500 text-red-200 text-[12px]">
