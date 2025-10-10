@@ -39,10 +39,7 @@ const CookieConsentBanner = () => {
           We use cookies to improve your browsing experience, help personalise
           content, tailor and measure ads, and provide a better experience. By
           clicking accept, you agree to this, as outlined in our{' '}
-          <Link
-            href="/privacy-policy"
-            className="underline hover:text-gray-300"
-          >
+          <Link href="/cookie-policy" className="underline hover:text-gray-300">
             Cookie Policy
           </Link>
           .
