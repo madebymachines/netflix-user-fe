@@ -319,13 +319,13 @@ export default function LeaderboardPage() {
   const isLoggedIn = !!user;
 
   const BUTTON_LABEL: Record<TimespanUI, string> = {
-    Weekly: "Weekly Momentum",
+    Weekly: "Weekly",
     Monthly: "Monthly",
   };
 
   const PERIOD_DESC: Record<TimespanUI, string> = {
     Weekly:
-      "Weekly Momentum is calculated by the number of daily login streaks in a week, multiplied by the total points users collected.",
+      "Weekly is calculated by the number of daily login streaks in a week, multiplied by the total points users collected.",
     Monthly:
       "Monthly Leaderboard is calculated based on the total points collected by users over 30 days.",
   };
