@@ -89,6 +89,17 @@ export default function ResetPasswordPage() {
     return () => clearInterval(t);
   }, [cooldown]);
 
+  // Watch password field and clear error messages when user types
+  const passwordValue = watch("password");
+  const confirmPasswordValue = watch("confirmPassword");
+  
+  useEffect(() => {
+    if (passwordValue || confirmPasswordValue) {
+      setApiError(null);
+      setApiSuccess(null);
+    }
+  }, [passwordValue, confirmPasswordValue]);
+
   const CONTENT_H = 590;
 
   const guestMenu = useMemo(
@@ -263,7 +274,7 @@ export default function ResetPasswordPage() {
               <p className="text-red-500 text-xs mt-1">{errors.otp.message}</p>
             )}
             <div className="text-[12px] mt-2 opacity-80">
-              Didn’t receive the code?{" "}
+              Didn't receive the code?{" "}
               <button
                 type="button"
                 onClick={handleResend}
@@ -279,22 +290,27 @@ export default function ResetPasswordPage() {
             </div>
           </div>
 
-          {/* Alerts */}
-          {apiError && (
-            <div className="!mt-4 text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
-              {apiError}
-            </div>
-          )}
-          {apiSuccess && (
-            <div className="!mt-4 text-center bg-green-500/20 border border-green-500 text-green-300 text-sm rounded-md p-2">
-              {apiSuccess}
+          {/* Alerts - Positioned above button with proper spacing */}
+          {(apiError || apiSuccess) && (
+            <div className="!mt-4">
+              {apiError && (
+                <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2 mb-3">
+                  {apiError}
+                </div>
+              )}
+              {apiSuccess && (
+                <div className="text-center bg-green-500/20 border border-green-500 text-green-300 text-sm rounded-md p-2 mb-3">
+                  {apiSuccess}
+                </div>
+              )}
             </div>
           )}
 
+          {/* Submit Button - Always visible at the bottom */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-white text-black py-2 !mt-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-md bg-white text-black py-2 !mt-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Submitting..." : "SUBMIT"}
           </button>
