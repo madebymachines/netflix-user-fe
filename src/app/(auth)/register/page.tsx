@@ -174,6 +174,14 @@ export default function RegisterPage() {
 
   const agreeChecked = watch("agree", false);
   const pwd = watch("password", "");
+  const confirmPwd = watch("confirmPassword", "");
+
+  // Clear API error when user types in password fields
+  useEffect(() => {
+    if (pwd || confirmPwd) {
+      setApiError(null);
+    }
+  }, [pwd, confirmPwd]);
 
   // Restore draft
   useEffect(() => {
@@ -194,7 +202,6 @@ export default function RegisterPage() {
       sessionStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
-          name,
           username,
           email,
           password,
@@ -331,14 +338,13 @@ export default function RegisterPage() {
               className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
               placeholder="Enter new password"
             />
-            {/* Pesan error dari Zod */}
             {errors.password && (
               <p className="text-red-500 text-xs mt-1">
                 {errors.password.message}
               </p>
             )}
 
-            {/* Checklist live (opsional) */}
+            {/* Checklist live */}
             <ul className="mt-2 text-[11px] space-y-1">
               <li className={policyOkLen ? "text-green-400" : "text-white/70"}>
                 {policyOkLen ? "✔" : "•"} At least 8 characters
@@ -401,18 +407,18 @@ export default function RegisterPage() {
             <p className="text-red-500 text-xs -mt-4">{errors.agree.message}</p>
           )}
 
-          {/* Error API */}
+          {/* Error API - Positioned above button */}
           {apiError && (
-            <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
+            <div className="!mt-4 mb-3 text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
               {apiError}
             </div>
           )}
 
-          {/* Submit */}
+          {/* Submit Button - Always visible at the bottom */}
           <button
             type="submit"
             disabled={!agreeChecked || isSubmitting}
-            className="w-full rounded-md bg-white text-black py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-md bg-white text-black py-2 !mt-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>
