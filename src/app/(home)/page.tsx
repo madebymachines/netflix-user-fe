@@ -223,11 +223,8 @@ export default function LandingPage() {
                   },
                 ].map((s, i) => {
                   const INDENT = 36;
-                  const CIRCLE_L = -28;
-                  const CIRCLE_R = -10;
                   const isZag = i % 2 === 1;
                   const indent = isZag ? INDENT : 0;
-                  const circleLeft = isZag ? CIRCLE_R : CIRCLE_L;
 
                   return (
                     <div
@@ -235,10 +232,6 @@ export default function LandingPage() {
                       className="relative py-5"
                       style={{ marginLeft: indent }}
                     >
-                      <span
-                        className="absolute h-10 w-10 rounded-full bg-white/10 border border-white/20 pointer-events-none"
-                        style={{ left: circleLeft }}
-                      />
                       <div className="pl-12">
                         <div className="text-[22px] font-extrabold leading-none mb-1">
                           {s.n}
