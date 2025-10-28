@@ -71,7 +71,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const [bodyOutlineKey, setBodyOutlineKey] = useState<number>(0);
   // YouTube video ID for shorts
   const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g"; // Replace with your YouTube Shorts ID
-
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,6 +80,9 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [captureCountdown, setCaptureCountdown] = useState<number | null>(null);
+  const [showCaptureFlash, setShowCaptureFlash] = useState<boolean>(false);
+  const [showCaptureSuccess, setShowCaptureSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     if (onHideLogo) {
@@ -95,24 +97,57 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     
     if (!canvas || !video) return;
     
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
+    // Start countdown from 3
+    setCaptureCountdown(3);
     
-    if (!tempCtx) return;
-    
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    
-    tempCtx.drawImage(video, 0, 0);
-    
-    const dataURL = tempCanvas.toDataURL('image/png');
-    
-    setScreenshots(prev => ({
-      ...prev,
-      [photoType]: dataURL
-    }));
-    
-    console.log(`Screenshot taken for: ${photoType}`);
+    const countdownInterval = setInterval(() => {
+      setCaptureCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownInterval);
+          
+          // Take the actual screenshot
+          setTimeout(() => {
+            // Flash effect
+            setShowCaptureFlash(true);
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            if (!tempCtx) return;
+            
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            
+            // Only draw video, not canvas with skeleton
+            tempCtx.drawImage(video, 0, 0);
+            
+            const dataURL = tempCanvas.toDataURL('image/png');
+            
+            setScreenshots(prev => ({
+              ...prev,
+              [photoType]: dataURL
+            }));
+            
+            console.log(`Screenshot taken for: ${photoType}`);
+            
+            // Hide flash and show success message
+            setTimeout(() => {
+              setShowCaptureFlash(false);
+              setShowCaptureSuccess(true);
+              
+              // Hide success message after 1.5 seconds
+              setTimeout(() => {
+                setShowCaptureSuccess(false);
+                setCaptureCountdown(null);
+              }, 1500);
+            }, 200);
+          }, 300);
+          
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }, []);
 
   // Initialize MediaPipe
@@ -194,7 +229,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setTimeRemaining(10);
       setProgressPercent(0);
       
-      // Trigger hydrate announcement immediately
+      // Take screenshot at the START of hydrate phase (after small delay for phase transition)
+      setTimeout(() => {
+        takeScreenshot('hydrate');
+      }, 500);
+      
+      // Trigger hydrate announcement
       setTimeout(() => {
         if (!hasSpokenHydrate) {
           playAnnouncement('Hydrate and Energize your body');
@@ -204,7 +244,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       
     } else if (phase === 'hydrate') {
       console.log('Transitioning from hydrate to go phase');
-      takeScreenshot('hydrate');
+      // HAPUS takeScreenshot dari sini karena sudah dipindah ke awal
       setProgressPercent(100);
       
       setTimeout(() => {
@@ -237,10 +277,15 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         setTimeRemaining(10);
         setProgressPercent(0);
         
-        // Trigger recovery announcement immediately
+        // Take screenshot at the START of recovery phase (after small delay for phase transition)
+        setTimeout(() => {
+          takeScreenshot('recovery');
+        }, 500);
+        
+        // Trigger recovery announcement
         setTimeout(() => {
           if (!hasSpokenRecovery) {
-            playAnnouncement('Recover and Repeat Stronger');
+            playAnnouncement('Time to Recover and Repeat Stronger your body');
             setHasSpokenRecovery(true);
           }
         }, 500);
@@ -257,7 +302,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       
     } else if (phase === 'recovery') {
       console.log('Recovery phase complete, transitioning to position-before-recovery');
-      takeScreenshot('recovery');
+      // HAPUS takeScreenshot dari sini karena sudah dipindah ke awal
       setProgressPercent(100);
       
       setTimeout(() => {
@@ -665,6 +710,48 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             </div>
           </div>
         </>
+      )}
+
+      {/* Countdown Overlay */}
+      {captureCountdown !== null && captureCountdown > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-2xl px-12 py-8 shadow-2xl animate-bounce">
+            <span className="text-black font-bold text-7xl">
+              {captureCountdown}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Flash Effect */}
+      {showCaptureFlash && (
+        <div className="fixed inset-0 z-50 bg-white pointer-events-none animate-flash" />
+      )}
+
+      {/* Capture Success Message */}
+      {showCaptureSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-green-500 rounded-2xl px-8 py-4 shadow-2xl transform scale-100 animate-popup">
+            <div className="flex items-center gap-3">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={3} 
+                  d="M5 13l4 4L19 7" 
+                />
+              </svg>
+              <span className="text-white font-bold text-2xl">
+                Image Captured!
+              </span>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

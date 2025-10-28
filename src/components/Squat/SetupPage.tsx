@@ -181,6 +181,36 @@ const SetupPage: React.FC<SetupPageProps> = ({
         />
       </div>
 
+      {/* Warning Marquee Text */}
+      <div 
+        className="w-full bg-[#FFA600] overflow-hidden"
+      >
+        <div 
+          className="whitespace-nowrap text-black text-[14px] font-urw font-regular py-2"
+          style={{
+            display: 'inline-block',
+            animation: 'marquee 20s linear infinite'
+          }}
+        >
+          For participants with certain medical conditions, please be mindful of your limits during the challenge and take breaks as needed.
+          &nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;
+          For participants with certain medical conditions, please be mindful of your limits during the challenge and take breaks as needed.
+          &nbsp;&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;
+          For participants with certain medical conditions, please be mindful of your limits during the challenge and take breaks as needed.
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes marquee {
+          0% {
+            transform: translateX(0%);
+          }
+          100% {
+            transform: translateX(-33.33%);
+          }
+        }
+      `}</style>
+
       {/* Status Checks - Remove margin top/bottom dan gunakan padding */}
       <div 
         className="mx-4 flex-shrink-0"

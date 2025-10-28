@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,36 +40,56 @@ function isValidatorErrArray(val: unknown): val is ValidatorError[] {
   return Array.isArray(val) && val.every((x) => isRecord(x));
 }
 
-const normalizeNumber = (raw?: string) => {
-  const digits = String(raw || "").replace(/\D+/g, "");
-  return digits.replace(/^0+/, "");
-};
-
 const COUNTRY_CODE = "MY";
-const DIAL_CODE = "+60";
+
+const hasLetter = /[A-Za-z]/;
+const hasNumber = /\d/;
+const hasSymbol = /[^A-Za-z0-9]/;
 
 const registerSchema = z
   .object({
-    name: z.string().min(1, "Full Name is required"),
     username: z.string().min(1, "Username is required"),
     email: z.string().email("Invalid email address"),
-    gender: z.enum(["MALE", "FEMALE"]),
-    phoneNumber: z
+    password: z
       .string()
-      .regex(/^\d{7,9}$/, "Phone number must be 7–9 digits")
-      .optional(),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+      .min(8, "Password must be at least 8 characters long")
+      .refine((v) => hasLetter.test(v), {
+        message: "Password must contain at least one letter (A–Z or a–z)",
+      })
+      .refine((v) => hasNumber.test(v), {
+        message: "Password must contain at least one number (0–9)",
+      })
+      .refine((v) => hasSymbol.test(v), {
+        message: "Password must contain at least one symbol (e.g. !@#$%^&*)",
+      }),
     confirmPassword: z.string(),
     agree: z.boolean().refine((val) => val === true, {
       message: "You must agree to the privacy policy",
     }),
   })
   .refine((d) => d.password === d.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
 type RegisterFormInputs = z.infer<typeof registerSchema>;
+
+type PayloadWithDetails = { details: JoiDetail[] };
+type PayloadWithErrors = { errors: ValidatorError[] };
+
+function hasDetails(payload: unknown): payload is PayloadWithDetails {
+  return (
+    isRecord(payload) &&
+    Array.isArray((payload as Record<string, unknown>).details)
+  );
+}
+
+function hasErrors(payload: unknown): payload is PayloadWithErrors {
+  return (
+    isRecord(payload) &&
+    Array.isArray((payload as Record<string, unknown>).errors)
+  );
+}
 
 function extractServerErrors<TFields>(
   payload: unknown,
@@ -94,7 +114,7 @@ function extractServerErrors<TFields>(
     if (mapKnown) result.fieldErrors.push(...mapKnown(msg));
   }
 
-  if (isJoiDetailArray(payload.details)) {
+  if (hasDetails(payload) && isJoiDetailArray(payload.details)) {
     payload.details.forEach((e) => {
       const pathRaw = Array.isArray(e.path) ? e.path[0] : e.path;
       if (typeof pathRaw === "string") {
@@ -109,7 +129,7 @@ function extractServerErrors<TFields>(
     }
   }
 
-  if (isValidatorErrArray(payload.errors)) {
+  if (hasErrors(payload) && isValidatorErrArray(payload.errors)) {
     payload.errors.forEach((e) => {
       const p = e.path || e.param || e.field;
       const m = e.msg || e.message || "Invalid value";
@@ -148,11 +168,20 @@ export default function RegisterPage() {
     reset,
   } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { agree: false, gender: "MALE" },
+    defaultValues: { agree: false },
     mode: "onChange",
   });
 
   const agreeChecked = watch("agree", false);
+  const pwd = watch("password", "");
+  const confirmPwd = watch("confirmPassword", "");
+
+  // Clear API error when user types in password fields
+  useEffect(() => {
+    if (pwd || confirmPwd) {
+      setApiError(null);
+    }
+  }, [pwd, confirmPwd]);
 
   // Restore draft
   useEffect(() => {
@@ -160,7 +189,7 @@ export default function RegisterPage() {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (raw) {
         const draft = JSON.parse(raw) as Partial<RegisterFormInputs>;
-        reset({ agree: false, gender: "MALE", ...draft });
+        reset({ agree: false, ...draft });
       }
     } catch {}
   }, [reset]);
@@ -168,24 +197,13 @@ export default function RegisterPage() {
   // Save draft
   useEffect(() => {
     const sub = watch((value) => {
-      const {
-        name,
-        username,
-        email,
-        gender,
-        phoneNumber,
-        password,
-        confirmPassword,
-        agree,
-      } = value as RegisterFormInputs;
+      const { username, email, password, confirmPassword, agree } =
+        value as RegisterFormInputs;
       sessionStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
-          name,
           username,
           email,
-          gender,
-          phoneNumber,
           password,
           confirmPassword,
           agree,
@@ -214,14 +232,9 @@ export default function RegisterPage() {
 
     try {
       await axios.post(`${API_BASE}/auth/register`, {
-        name: data.name,
         username: data.username,
         email: data.email,
         password: data.password,
-        gender: data.gender,
-        phoneNumber: data.phoneNumber
-          ? `${DIAL_CODE}${normalizeNumber(data.phoneNumber)}`
-          : undefined,
         country: COUNTRY_CODE,
       });
 
@@ -267,6 +280,11 @@ export default function RegisterPage() {
     }
   };
 
+  const policyOkLen = pwd.length >= 8;
+  const policyOkLetter = hasLetter.test(pwd);
+  const policyOkNumber = hasNumber.test(pwd);
+  const policyOkSymbol = hasSymbol.test(pwd);
+
   return (
     <MobileShell
       header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
@@ -277,21 +295,6 @@ export default function RegisterPage() {
         <h1 className="text-[28px] font-extrabold mb-6">Sign Up</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Full Name */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">
-              Full Name
-            </label>
-            <input
-              {...register("name")}
-              className="w-full bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
-              placeholder="Enter your full name"
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-            )}
-          </div>
-
           {/* Username */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
@@ -324,61 +327,6 @@ export default function RegisterPage() {
             )}
           </div>
 
-          {/* Gender */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">Gender</label>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
-                <input
-                  type="radio"
-                  value="MALE"
-                  {...register("gender")}
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Male</span>
-              </label>
-              <label className="flex items-center gap-2 border-b border-white/40 pb-2">
-                <input
-                  type="radio"
-                  value="FEMALE"
-                  {...register("gender")}
-                  className="h-4 w-4 accent-red-600"
-                />
-                <span>Female</span>
-              </label>
-            </div>
-            {errors.gender && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.gender.message}
-              </p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-[12px] mb-1 opacity-80">
-              Phone Number
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-2 rounded-md bg-white/10 border border-white/20 text-[12px] select-none">
-                {DIAL_CODE}
-              </span>
-              <input
-                {...register("phoneNumber")}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={9}
-                className="flex-1 bg-transparent border-b border-white/40 px-0 py-2 placeholder-white/40 focus:outline-none focus:border-white"
-                placeholder="Enter your phone number"
-              />
-            </div>
-            {errors.phoneNumber && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.phoneNumber.message}
-              </p>
-            )}
-          </div>
-
           {/* Password */}
           <div>
             <label className="block text-[12px] mb-1 opacity-80">
@@ -395,6 +343,28 @@ export default function RegisterPage() {
                 {errors.password.message}
               </p>
             )}
+
+            {/* Checklist live */}
+            <ul className="mt-2 text-[11px] space-y-1">
+              <li className={policyOkLen ? "text-green-400" : "text-white/70"}>
+                {policyOkLen ? "✔" : "•"} At least 8 characters
+              </li>
+              <li
+                className={policyOkLetter ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkLetter ? "✔" : "•"} Contains a letter (A–Z / a–z)
+              </li>
+              <li
+                className={policyOkNumber ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkNumber ? "✔" : "•"} Contains a number (0–9)
+              </li>
+              <li
+                className={policyOkSymbol ? "text-green-400" : "text-white/70"}
+              >
+                {policyOkSymbol ? "✔" : "•"} Contains a symbol (!@#$%^&*)
+              </li>
+            </ul>
           </div>
 
           {/* Confirm Password */}
@@ -426,26 +396,29 @@ export default function RegisterPage() {
               By creating an account, you agree on our{" "}
               <a href="/privacy-policy" className="underline">
                 privacy policy
+              </a>{" "}
+              &{" "}
+              <a href="/t&c" className="underline">
+                T&amp;C
               </a>
-              .
             </span>
           </label>
           {errors.agree && (
             <p className="text-red-500 text-xs -mt-4">{errors.agree.message}</p>
           )}
 
-          {/* Error API */}
+          {/* Error API - Positioned above button */}
           {apiError && (
-            <div className="text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
+            <div className="!mt-4 mb-3 text-center bg-red-500/20 border border-red-500 text-red-300 text-sm rounded-md p-2">
               {apiError}
             </div>
           )}
 
-          {/* Submit */}
+          {/* Submit Button - Always visible at the bottom */}
           <button
             type="submit"
             disabled={!agreeChecked || isSubmitting}
-            className="w-full rounded-md bg-white text-black py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-md bg-white text-black py-2 !mt-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>
