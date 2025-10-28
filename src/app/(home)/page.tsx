@@ -60,7 +60,9 @@ export default function LandingPage() {
   return (
     <>
       <MobileShell
-        header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
+        header={
+          <Header fixed onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
+        }
         contentHeight={CONTENT_H}
       >
         {/* BG bola (tinggi tetap) */}
