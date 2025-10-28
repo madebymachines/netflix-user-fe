@@ -7,7 +7,6 @@ let hasUserInteracted = false;
 let audioInitializationAttempts = 0;
 let selectedVoiceGlobal: SpeechSynthesisVoice | null = null;
 
-// Initialize audio context setelah user interaction
 const initAudioContext = async (): Promise<void> => {
   if (!audioContext) {
     try {
@@ -38,7 +37,6 @@ const initAudioContext = async (): Promise<void> => {
   }
 };
 
-
 const preloadVoices = (): Promise<void> => {
   return new Promise((resolve) => {
     if (speechSynthesis.getVoices().length > 0) {
@@ -48,7 +46,7 @@ const preloadVoices = (): Promise<void> => {
     }
 
     let attempts = 0;
-    const maxAttempts = 30; 
+    const maxAttempts = 30; // 3 detik dengan interval 100ms
 
     const checkVoices = () => {
       const voices = speechSynthesis.getVoices();
@@ -69,6 +67,7 @@ const preloadVoices = (): Promise<void> => {
       }
     };
 
+    // Listen untuk voiceschanged event
     const voicesChangedHandler = () => {
       console.log('voiceschanged event fired');
       resolve();
@@ -78,7 +77,6 @@ const preloadVoices = (): Promise<void> => {
     checkVoices();
   });
 };
-
 
 const selectVoiceOptimized = (): SpeechSynthesisVoice | null => {
   const voices = speechSynthesis.getVoices();
@@ -107,22 +105,29 @@ const selectVoiceOptimized = (): SpeechSynthesisVoice | null => {
   let selectedVoice: SpeechSynthesisVoice | null = null;
 
   if (isIOS) {
+    // iOS: Prefer Samantha (consistent female voice)
     selectedVoice = voices.find(voice => {
       const name = voice.name.toLowerCase();
       return name.includes('samantha') && voice.lang.includes('en');
     }) || null;
+
   } else if (isAndroid) {
+    // Android: Prefer Google voices untuk consistency
     selectedVoice = voices.find(voice => {
       const name = voice.name.toLowerCase();
       const lang = voice.lang.toLowerCase();
       return name.includes('google') && (lang.includes('en-us') || lang.includes('english'));
     }) || null;
+
   } else if (isSafari) {
+    // Safari Desktop: Prefer Samantha (consistent female voice)
     selectedVoice = voices.find(voice => {
       const name = voice.name.toLowerCase();
       return name.includes('samantha') && voice.lang.includes('en');
     }) || null;
+
   } else if (isChrome || isFirefox) {
+    // Chrome/Firefox Desktop: Prefer Google voices
     selectedVoice = voices.find(voice => {
       const name = voice.name.toLowerCase();
       return name.includes('google us english') && voice.lang.includes('en');
@@ -137,7 +142,6 @@ const selectVoiceOptimized = (): SpeechSynthesisVoice | null => {
   return selectedVoice;
 };
 
-// Enable audio setelah user interaction
 export const enableAudio = async (): Promise<void> => {
   console.log('enableAudio called, attempt:', ++audioInitializationAttempts);
   hasUserInteracted = true;
@@ -160,7 +164,7 @@ export const enableAudio = async (): Promise<void> => {
     // Test dengan silent utterance untuk prime speech synthesis
     try {
       const testUtterance = new SpeechSynthesisUtterance(' ');
-      testUtterance.volume = 1.0;
+      testUtterance.volume = 1.0; 
       testUtterance.rate = 1.0;
       testUtterance.pitch = 1.0;
       
@@ -189,7 +193,96 @@ export const enableAudio = async (): Promise<void> => {
   }
 };
 
-// Complete number mapping untuk pronunciation yang lebih baik
+export const testAudio = async (): Promise<boolean> => {
+  try {
+    console.log('=== AUDIO TEST START ===');
+    console.log('User agent:', navigator.userAgent);
+    console.log('Has user interacted:', hasUserInteracted);
+    console.log('Audio enabled:', isAudioEnabled);
+    
+    await enableAudio();
+    
+    // Test audio context
+    if (audioContext) {
+      console.log('AudioContext state:', audioContext.state);
+      console.log('AudioContext sample rate:', audioContext.sampleRate);
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+        console.log('AudioContext resumed, new state:', audioContext.state);
+      }
+    }
+    
+    // Test speech synthesis
+    if ('speechSynthesis' in window) {
+      const voices = speechSynthesis.getVoices();
+      console.log('Speech synthesis voices count:', voices.length);
+      console.log('Speech synthesis speaking:', speechSynthesis.speaking);
+      console.log('Speech synthesis pending:', speechSynthesis.pending);
+      console.log('Speech synthesis paused:', speechSynthesis.paused);
+      
+      // Test dengan actual speech
+      return new Promise((resolve) => {
+        const testUtterance = new SpeechSynthesisUtterance('test');
+        testUtterance.volume = 1.0;
+        testUtterance.rate = 1.0;
+        testUtterance.pitch = 1.0;
+        testUtterance.lang = 'en-US';
+        
+        if (selectedVoiceGlobal) {
+          testUtterance.voice = selectedVoiceGlobal;
+          console.log('Using voice:', selectedVoiceGlobal.name, selectedVoiceGlobal.lang);
+        }
+        
+        let resolved = false;
+        const resolveOnce = (result: boolean) => {
+          if (!resolved) {
+            resolved = true;
+            console.log('Audio test result:', result);
+            console.log('=== AUDIO TEST END ===');
+            resolve(result);
+          }
+        };
+        
+        testUtterance.onstart = () => {
+          console.log('Test speech started successfully');
+          resolveOnce(true);
+        };
+        
+        testUtterance.onend = () => {
+          console.log('Test speech ended');
+          if (!resolved) resolveOnce(true);
+        };
+        
+        testUtterance.onerror = (event) => {
+          console.error('Test speech error:', event.error);
+          resolveOnce(false);
+        };
+        
+        try {
+          speechSynthesis.speak(testUtterance);
+          console.log('Test utterance queued');
+          
+          // Timeout fallback
+          setTimeout(() => {
+            resolveOnce(false);
+          }, 3000);
+        } catch (error) {
+          console.error('Error speaking test utterance:', error);
+          resolveOnce(false);
+        }
+      });
+    } else {
+      console.error('Speech synthesis not supported');
+      console.log('=== AUDIO TEST END ===');
+      return false;
+    }
+  } catch (error) {
+    console.error('Audio test failed:', error);
+    console.log('=== AUDIO TEST END ===');
+    return false;
+  }
+};
+
 const englishNumbers: Record<number, string> = {
   1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five',
   6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten',
@@ -213,7 +306,6 @@ const englishNumbers: Record<number, string> = {
   96: 'ninety six', 97: 'ninety seven', 98: 'ninety eight', 99: 'ninety nine', 100: 'one hundred'
 };
 
-// Process the speech queue sequentially
 const processQueue = async (): Promise<void> => {
   if (isProcessingQueue || speechQueue.length === 0) {
     return;
@@ -272,10 +364,10 @@ const speakTextImmediate = (text: string, rate: number = 1.0, volume: number = 1
       speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       utterance.rate = 1.0
       utterance.volume = 1.0
-      utterance.pitch = 1.0;
+      utterance.pitch = 1.0; 
       utterance.lang = 'en-US'; 
       
       // Use cached voice untuk consistency
@@ -341,7 +433,6 @@ const speakTextImmediate = (text: string, rate: number = 1.0, volume: number = 1
   });
 };
 
-// Queue-based speak text function
 const speakText = (text: string, rate: number = 1.0, volume: number = 1.0): Promise<void> => {
   return new Promise((resolve) => {
     console.log('speakText called:', text);
@@ -358,7 +449,6 @@ const speakText = (text: string, rate: number = 1.0, volume: number = 1.0): Prom
   });
 };
 
-// Enhanced count sound
 export const playCountSound = async (count: number): Promise<void> => {
   console.log('playCountSound called with count:', count);
   
