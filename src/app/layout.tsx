@@ -1,14 +1,14 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
 // import { urw, gravtrac, vancouver, vancouverGothic } from "./fonts";
-import DesktopGate from '@/components/DesktopGate';
-import CookieConsentBanner from '@/components/CookieConsentBanner';
+import DesktopGate from "@/components/DesktopGate";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Netflix - 100 PLUS',
-  description: 'Unlock Your 100 Challenge',
+  title: "Netflix - 100 PLUS",
+  description: "Unlock Your 100 Challenge",
 };
 
 export default function RootLayout({
@@ -22,8 +22,8 @@ export default function RootLayout({
         // className={`${urw.variable} ${gravtrac.variable} ${vancouver.variable} ${vancouverGothic.variable} bg-black antialiased`}
         className="bg-black antialiased"
       >
-        {children}
-        {/* <DesktopGate>{children}</DesktopGate> */}
+        {/* {children} */}
+        <DesktopGate>{children}</DesktopGate>
         <CookieConsentBanner />
       </body>
     </html>
