@@ -3,7 +3,7 @@ import Header from "./Header";
 type Props = {
   children: React.ReactNode;
   header?: React.ReactNode;
-  contentHeight?: number; // kalau diisi → fixed height
+  contentHeight?: number;
   dimAll?: boolean;
   overlayChildren?: React.ReactNode;
 };
@@ -16,22 +16,16 @@ export default function MobileShell({
   overlayChildren,
 }: Props) {
   const fixed = typeof contentHeight === "number";
-  const stageH = fixed ? 50 + contentHeight : undefined;
 
   return (
     <div className="w-full min-h-screen bg-black flex justify-center">
-      <div
-        className="relative w-full max-w-screen-sm md:max-w-screen-md lg:max-w-screen-lg"
-        style={fixed ? { height: stageH } : undefined}
-      >
-        {/* Header full width */}
-        <div className="absolute top-0 left-0 right-0 z-30">
-          {header ?? <Header />}
-        </div>
+      <div className="relative w-full max-w-screen-sm md:max-w-screen-md lg:max-w-screen-lg">
+        {/* Header kini ikut flow dokumen (sticky di komponen Header) */}
+        {header ?? <Header />}
 
-        {/* Konten di bawah header */}
+        {/* Konten di bawah header: tidak perlu mt-[50px] lagi */}
         <section
-          className={`relative mt-[50px] ${fixed ? "overflow-hidden" : ""}`}
+          className={fixed ? "relative overflow-hidden" : "relative"}
           style={{ height: fixed ? contentHeight : undefined, width: "100%" }}
         >
           {children}
@@ -40,16 +34,8 @@ export default function MobileShell({
         {/* Overlay full stage */}
         {dimAll && (
           <>
-            <div
-              className="absolute inset-0 z-40 bg-black/80 pointer-events-auto"
-              style={fixed ? { height: stageH } : undefined}
-            />
-            <div
-              className="absolute inset-0 z-50"
-              style={fixed ? { height: stageH } : undefined}
-            >
-              {overlayChildren}
-            </div>
+            <div className="absolute inset-0 z-50 bg-black/80 pointer-events-auto" />
+            <div className="absolute inset-0 z-[60]">{overlayChildren}</div>
           </>
         )}
       </div>
