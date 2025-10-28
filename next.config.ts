@@ -15,12 +15,11 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Proxy lokal ke BE kamu (tetap)
   async rewrites() {
     return [
       {
         source: "/api/v1/:path*",
-        destination: "https://mirror-100-plus-be.onrender.com/v1/:path*",
+        destination: "https://netflix-be-1.onrender.com/v1/:path*",
       },
     ];
   },
