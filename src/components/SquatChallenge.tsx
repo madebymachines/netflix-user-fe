@@ -69,8 +69,16 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const [positionValidation, setPositionValidation] = useState<PositionValidation>({ isValid: false, message: "" });
   const [isPositionConfirmed, setIsPositionConfirmed] = useState<boolean>(false);
   const [bodyOutlineKey, setBodyOutlineKey] = useState<number>(0);
+  
+  // ✅ BARU: Store last valid frame untuk fallback screenshot
+  const [lastValidFrame, setLastValidFrame] = useState<string | null>(null);
+  const [fallbackAttempted, setFallbackAttempted] = useState<Record<number, boolean>>({
+    1: false,
+    2: false
+  });
+  
   // YouTube video ID for shorts
-  const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g"; // Replace with your YouTube Shorts ID
+  const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g";
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -88,6 +96,39 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     }
   }, [phase, onHideLogo]);
 
+  // ✅ BARU: Fungsi untuk capture frame terakhir (untuk fallback)
+  const captureLastFrame = useCallback((): void => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (!video || !canvas) return;
+    
+    try {
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      if (!tempCtx) return;
+      
+      tempCanvas.width = video.videoWidth;
+      tempCanvas.height = video.videoHeight;
+      
+      if (tempCanvas.width === 0 || tempCanvas.height === 0) {
+        console.warn('Invalid video dimensions for fallback frame capture');
+        return;
+      }
+      
+      tempCtx.drawImage(video, 0, 0);
+      const dataURL = tempCanvas.toDataURL('image/png');
+      
+      if (dataURL && dataURL.length > 100) {
+        setLastValidFrame(dataURL);
+        console.log('✓ Last valid frame captured for fallback');
+      }
+    } catch (error) {
+      console.error('Error capturing last frame:', error);
+    }
+  }, []);
+
   // Screenshot function
   const takeScreenshot = useCallback((photoType: PhotoType): void => {
     const canvas = canvasRef.current;
@@ -103,6 +144,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     tempCanvas.width = video.videoWidth;
     tempCanvas.height = video.videoHeight;
     
+    // ✅ IMPROVED: Tambahkan validasi dimensi
+    if (tempCanvas.width === 0 || tempCanvas.height === 0) {
+      console.warn(`Screenshot failed for ${photoType}: Invalid video dimensions`);
+      return;
+    }
+    
     tempCtx.drawImage(video, 0, 0);
     
     const dataURL = tempCanvas.toDataURL('image/png');
@@ -112,8 +159,34 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       [photoType]: dataURL
     }));
     
-    console.log(`Screenshot taken for: ${photoType}`);
+    console.log(`✓ Screenshot taken for: ${photoType}`);
   }, []);
+
+  // ✅ BARU: Fungsi untuk fallback screenshot menggunakan last frame
+  const takeFallbackScreenshot = useCallback((photoType: PhotoType, round: number): void => {
+    if (lastValidFrame && !fallbackAttempted[round as keyof typeof fallbackAttempted]) {
+      console.warn(`⚠️ No squat detected in round ${round}, taking FALLBACK screenshot at end of exercise`);
+      
+      setScreenshots(prev => ({
+        ...prev,
+        [photoType]: lastValidFrame
+      }));
+      
+      setHasSquatPhoto(prev => ({
+        ...prev,
+        [`round${round}`]: true
+      }));
+      
+      setFallbackAttempted(prev => ({
+        ...prev,
+        [round]: true
+      }));
+      
+      console.log(`✓ Fallback screenshot applied for: ${photoType}`);
+    } else if (!lastValidFrame) {
+      console.error(`Cannot apply fallback: No last valid frame available for round ${round}`);
+    }
+  }, [lastValidFrame, fallbackAttempted]);
 
   // Initialize MediaPipe
   useEffect(() => {
@@ -224,12 +297,21 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           squatCounterRef.current.resetCount();
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+          // ✅ BARU: Reset fallback attempt flag untuk round baru
+          setFallbackAttempted(prev => ({ ...prev, [currentRound]: false }));
         }, 2000);
       }, 1000);
       
     } else if (phase === 'exercise') {
       console.log(`Exercise phase complete for round ${currentRound}`);
       setProgressPercent(100);
+      
+      // ✅ BARU: FALLBACK SCREENSHOT jika belum ada
+      if (!hasSquatPhoto[`round${currentRound}` as keyof SquatPhotoStatus]) {
+        console.warn(`⚠️ No squat screenshot captured for round ${currentRound}, applying fallback...`);
+        const photoType: PhotoType = currentRound === 1 ? 'round1Squat' : 'round2Squat';
+        takeFallbackScreenshot(photoType, currentRound);
+      }
       
       if (currentRound === 1) {
         console.log('Transitioning to recovery phase');
@@ -285,10 +367,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           squatCounterRef.current.resetCount();
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
+          // ✅ BARU: Reset fallback attempt flag untuk round 2
+          setFallbackAttempted(prev => ({ ...prev, [2]: false }));
         }, 2000);
       }, 1000);
     }
-  }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations, hasSpokenHydrate, hasSpokenRecovery]);
+  }, [phase, currentRound, takeScreenshot, hasSpokenCongratulations, hasSpokenHydrate, hasSpokenRecovery, hasSquatPhoto, takeFallbackScreenshot]);
 
   // Pose detection with proper canvas sizing and positioning
   const detectPose = useCallback(async (): Promise<void> => {
@@ -350,6 +434,9 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         
         // Handle exercise phase
         if (phase === 'exercise') {
+          // ✅ BARU: Capture last frame setiap frame untuk fallback
+          captureLastFrame();
+          
           // Draw skeleton
           const drawingUtils = new DrawingUtils(canvasCtx);
           drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF', lineWidth: 2 });
@@ -383,7 +470,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       console.error('Error in pose detection:', error);
       animationFrameRef.current = requestAnimationFrame(detectPose);
     }
-  }, [webcamRunning, phase, currentRound, takeScreenshot, hasSquatPhoto, isPositionConfirmed, handlePhaseComplete]);
+  }, [webcamRunning, phase, currentRound, takeScreenshot, hasSquatPhoto, isPositionConfirmed, handlePhaseComplete, captureLastFrame]);
 
   useEffect(() => {
     if (webcamRunning) {
@@ -403,7 +490,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setIsPositionConfirmed(false);
       positionValidatorRef.current.reset();
       setBodyOutlineKey(prev => prev + 1);
-      stopAllAudio(); // Clear any pending audio
+      stopAllAudio();
     }
   }, [phase]);
 
@@ -536,14 +623,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
 
   return (
     <div 
-      className="w-full bg-black text-white flex flex-col" 
-      // style={{ 
-      //   maxWidth: '430px', 
-      //   margin: "0 auto",
-      //   minHeight: '100vh',
-      //   height: '100vh', // Tambahkan height eksplisit untuk konsistensi Safari
-      //   overflow: 'hidden' // Cegah scrolling yang tidak diinginkan
-      // }}
+      className="w-full bg-black text-white flex flex-col"
     >
       {phase === 'setup' && (
         <SetupPage
