@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Check, X, Volume2, VolumeX } from 'lucide-react';
-import YouTubeVideo from './YoutubeVideo';
+// import YouTubeVideo from './YoutubeVideo';
 import { enableAudio, testAudio, getAudioState, playAnnouncement } from '../../utils/AudioUtils';
 
 // Interface for SetupPage props
