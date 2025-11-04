@@ -497,7 +497,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   useEffect(() => {
     console.log(`Timer started for phase: ${phase}, time: ${timeRemaining}`);
     
-    if (phase === 'hydrate' || phase === 'exercise' || phase === 'recovery' || phase === 'take-picture') {
+    if (phase === 'hydrate' || phase === 'exercise' || phase === 'recovery') {
       const interval = setInterval(() => {
         setTimeRemaining(prev => {
           console.log(`Timer tick: ${phase}, remaining: ${prev - 1}`);
@@ -507,22 +507,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             playAnnouncement(message);
           }
           
-          // ✅ PERUBAHAN: Saat countdown mencapai 1, ambil foto final
-          if (phase === 'take-picture' && prev === 1) {
-            takeScreenshot('finalPhoto');
-            console.log('Final photo taken!');
-          }
-          
           if (prev <= 1) {
             console.log(`Timer finished for phase: ${phase}`);
             clearInterval(interval);
             
             setTimeout(() => {
-              if (phase === 'take-picture') {
-                setPhase('grid');
-              } else {
-                handlePhaseComplete();
-              }
+              handlePhaseComplete();
             }, 100);
             
             return 0;
@@ -534,6 +524,37 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
 
       return () => {
         console.log(`Cleaning up timer for phase: ${phase}`);
+        clearInterval(interval);
+      };
+    } else if (phase === 'take-picture') {
+      // Timer untuk take-picture phase
+      const interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          console.log(`Take-picture timer tick: ${prev - 1}`);
+          
+          if (prev === 1) {
+            // Saat countdown mencapai 1, ambil foto
+            takeScreenshot('finalPhoto');
+            console.log('Final photo taken!');
+          }
+          
+          if (prev <= 1) {
+            console.log('Take-picture timer finished');
+            clearInterval(interval);
+            
+            setTimeout(() => {
+              setPhase('grid');
+            }, 100);
+            
+            return 0;
+          }
+          
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        console.log('Cleaning up take-picture timer');
         clearInterval(interval);
       };
     }
@@ -569,13 +590,10 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   if (phase === 'grid') {
     const round1Count = parseInt(sessionStorage.getItem('squats_round_1') || '0');
     const round2Count = parseInt(sessionStorage.getItem('squats_round_2') || '0');
-    const photosArray: (string | undefined)[] = [
-      screenshots.finalPhoto
-    ];
     
     return (
       <GridPhotoPage
-        photos={photosArray}
+        photo={screenshots.finalPhoto}
         totalSquats={totalSquats}
         round1Count={round1Count}
         round2Count={round2Count}

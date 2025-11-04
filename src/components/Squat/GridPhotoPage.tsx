@@ -4,7 +4,7 @@ import { prepareActivitySubmission } from '@/utils/ActivityUtils';
 
 // Define interfaces for props
 interface GridPhotoPageProps {
-  photos: (string | undefined)[]; // Updated to allow undefined values
+  photo?: string;
   totalSquats: number;
   round1Count: number;
   round2Count: number;
@@ -19,7 +19,7 @@ interface GridPhotoPageProps {
 
 // Grid Photo Component
 const GridPhotoPage: React.FC<GridPhotoPageProps> = ({ 
-  photos, 
+  photo, 
   totalSquats, 
   round1Count, 
   round2Count, 
@@ -36,7 +36,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
   useEffect(() => {
     generateGridImage();
-  }, [photos]);
+  }, [photo]);
 
 
   const handleSubmitActivity = async (): Promise<void> => {
@@ -138,265 +138,118 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
     await loadFonts();
     
+    // Canvas untuk single image yang lebih besar
     canvas.width = 400;
-    canvas.height = 760; // Tetap sama
+    canvas.height = 800;
     
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    const logoHeight = 80;
-    const logoY = 10;
-    
-    const gridStartY = logoHeight + 20;
-    const photoWidth = canvas.width / 2; // 200px
-    const photoHeight = photoWidth * 1.4; // 280px
-    const gridHeight = photoHeight * 2;
-    
     try {
-      // Load and draw logo
+      // Draw logo at top
       try {
         const logoImg = await loadImage('./images/logo2.png');
         const logoDisplayWidth = 205;
         const logoDisplayHeight = 73;
         const logoX = (canvas.width - logoDisplayWidth) / 2;
-        const logoYPos = logoY + (logoHeight - logoDisplayHeight) / 2;
+        const logoYPos = 10;
         ctx.drawImage(logoImg, logoX, logoYPos, logoDisplayWidth, logoDisplayHeight);
       } catch (logoError) {
         console.error('Error loading logo:', logoError);
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('UNLOCK YOUR 100', canvas.width / 2, logoY + logoHeight / 2);
+        ctx.fillText('UNLOCK YOUR 100', canvas.width / 2, 50);
       }
 
-      // Draw photos in grid
-      for (let i = 0; i < 4; i++) {
-        const photoSrc = photos[i];
-        const x = (i % 2) * photoWidth;
-        const y = gridStartY + Math.floor(i / 2) * photoHeight;
-        
-        // Label untuk setiap photo
-        const phaseLabels = ['Hydrate', 'Round 1', 'Recovery', 'Final Photo'];
-        
-        if (photoSrc && photoSrc.trim() !== '') {
-          try {
-            const img = await loadImage(photoSrc);
-            ctx.drawImage(img, x, y, photoWidth, photoHeight);
+      // Draw large photo in center
+      const photoX = 20;
+      const photoY = 100;
+      const photoWidth = canvas.width - 40;
+      const photoHeight = (photoWidth * 4) / 3; // 4:3 ratio atau sesuai kebutuhan
 
-            // Add overlays berdasarkan index
-            if (i === 0) {
-              // Hydrate - sama seperti sebelumnya
-              const bannerWidth = photoWidth * 0.85;
-              const bannerX = x + (photoWidth - bannerWidth) / 2;
-              const bannerHeight = 25;
-              const bannerY = y + photoHeight * 0.65;
-              const progressPercent = 0.90;
-              const progressWidth = bannerWidth * progressPercent;
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.beginPath();
-              ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 5);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.beginPath();
-              ctx.roundRect(bannerX, bannerY, progressWidth, bannerHeight, [5, 0, 0, 5]);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 12px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText('HYDRATE AND ENERGIZE', x + photoWidth/2, bannerY + bannerHeight/2);
-              
-              try {
-                const bottleImg = await loadImage('./images/bottle.png');
-                const bottleSize = 30;
-                const bottleX = bannerX + progressWidth - bottleSize/2;
-                const bottleY = bannerY - bottleSize - 1;
-                ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
-              } catch (bottleError) {
-                console.error('Error loading bottle image:', bottleError);
-              }
-              
-              const gap = 5;
-              const blackBannerY = bannerY + bannerHeight + gap;
-              const blackBannerHeight = 18;
-              const blackBannerWidth = photoWidth * 0.75;
-              const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.beginPath();
-              ctx.roundRect(blackBannerX, blackBannerY, blackBannerWidth, blackBannerHeight, 5);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 10px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText('BEFORE UNLOCK YOUR 100', x + photoWidth/2, blackBannerY + blackBannerHeight/2);
-            }
-            else if (i === 1) {
-              // Round 1 - sama seperti sebelumnya
-              const counterAreaY = y + photoHeight * 0.55;
-              const counterAreaHeight = photoHeight * 0.40;
-              const actualCount = round1Count;
-              const centerY = counterAreaY + counterAreaHeight/2;
-              
-              ctx.save();
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 14px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.translate(x + 45, centerY - 10);
-              ctx.rotate(-Math.PI / 2);
-              ctx.fillText('ROUND 1', 0, 0);
-              ctx.restore();
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.font = 'bold 60px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.fillText(actualCount.toString(), x + photoWidth/2 - 10, centerY - 8);
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.font = 'bold 24px "URW Geometric"';
-              ctx.textAlign = 'left';
-              ctx.fillText('REP', x + photoWidth/2 + 25, centerY - 15);
-            }
-            else if (i === 2) {
-              // Recovery - sama seperti sebelumnya
-              const bannerWidth = photoWidth * 0.85;
-              const bannerX = x + (photoWidth - bannerWidth) / 2;
-              const bannerHeight = 25;
-              const bannerY = y + photoHeight * 0.65;
-              const progressPercent = 0.90;
-              const progressWidth = bannerWidth * progressPercent;
-              
-              const gap = 5;
-              const blackBannerHeight = 18;
-              ctx.font = 'bold 10px "URW Geometric"';
-              const textMetrics = ctx.measureText("IT'S TIME TO");
-              const blackBannerWidth = textMetrics.width + 20;
-              const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
-              const blackBannerY = bannerY - blackBannerHeight - gap;
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.beginPath();
-              ctx.roundRect(blackBannerX, blackBannerY, blackBannerWidth, blackBannerHeight, 5);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FFFFFF';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + blackBannerHeight/2);
-              
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-              ctx.beginPath();
-              ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 5);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.beginPath();
-              ctx.roundRect(bannerX, bannerY, progressWidth, bannerHeight, [5, 0, 0, 5]);
-              ctx.fill();
-              
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 12px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText('RECOVER & REPEAT STRONGER', x + photoWidth/2, bannerY + bannerHeight/2);
-              
-              try {
-                const bottleImg = await loadImage('./images/bottle.png');
-                const bottleSize = 30;
-                const bottleX = bannerX + progressWidth - bottleSize/2;
-                const bottleY = bannerY - bottleSize - 1;
-                ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
-              } catch (bottleError) {
-                console.error('Error loading bottle image:', bottleError);
-              }
-            }
-            else if (i === 3) {
-              // Final Photo - BARU: Tampilkan dengan styling khusus
-              const counterAreaY = y + photoHeight * 0.55;
-              const counterAreaHeight = photoHeight * 0.40;
-              const actualCount = round2Count;
-              const centerY = counterAreaY + counterAreaHeight/2;
-              
-              // Tambahkan background semi-transparan untuk round 2
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-              ctx.fillRect(x, y + photoHeight * 0.5, photoWidth, photoHeight * 0.5);
-              
-              ctx.save();
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = 'bold 14px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.translate(x + 45, centerY - 10);
-              ctx.rotate(-Math.PI / 2);
-              ctx.fillText('FINAL', 0, 0);
-              ctx.restore();
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.font = 'bold 60px "URW Geometric"';
-              ctx.textAlign = 'center';
-              ctx.fillText(actualCount.toString(), x + photoWidth/2 - 10, centerY - 8);
-              
-              ctx.fillStyle = '#FF0000';
-              ctx.font = 'bold 24px "URW Geometric"';
-              ctx.textAlign = 'left';
-              ctx.fillText('REP', x + photoWidth/2 + 25, centerY - 15);
-            }
-
-          } catch (imageError) {
-            console.error(`Error loading photo ${i}:`, imageError);
-            drawPlaceholder(ctx, i, photoWidth, photoHeight, gridStartY);
-          }
-        } else {
-          drawPlaceholder(ctx, i, photoWidth, photoHeight, gridStartY);
+      if (photo && photo.trim() !== '') {
+        try {
+          const img = await loadImage(photo);
+          ctx.drawImage(img, photoX, photoY, photoWidth, photoHeight);
+          
+          // Add semi-transparent overlay di bawah untuk stats
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+          ctx.fillRect(photoX, photoY + photoHeight - 100, photoWidth, 100);
+        } catch (imageError) {
+          console.error('Error loading photo:', imageError);
+          // Draw placeholder
+          ctx.fillStyle = '#333333';
+          ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
+          ctx.strokeStyle = '#666666';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(photoX, photoY, photoWidth, photoHeight);
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '16px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('Photo not available', canvas.width / 2, photoY + photoHeight / 2);
         }
+      } else {
+        // Draw placeholder
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
+        ctx.strokeStyle = '#666666';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(photoX, photoY, photoWidth, photoHeight);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Photo not available', canvas.width / 2, photoY + photoHeight / 2);
       }
-      
-      // Draw stats section
-      const statsStartY = gridStartY + gridHeight + 10;
-      const statsHeight = 120;
-      
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, statsStartY, canvas.width, statsHeight);
-      
-      const statsCenterX = canvas.width / 2;
-      const statsCenterY = statsStartY + 60;
-      
-      ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 100px "URW Geometric"';
-      ctx.textAlign = 'right';
-      const countText = totalSquats.toString();
-      ctx.fillText(countText, statsCenterX - 80, statsCenterY);
 
-      ctx.save();
-      ctx.fillStyle = '#ff0000';
+      // Draw stats section at bottom
+      const statsStartY = photoY + photoHeight + 20;
+      
+      // Draw "CHALLENGE COMPLETED" header
+      ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 18px "URW Geometric"';
+      ctx.textAlign = 'center';
+      ctx.fillText('CHALLENGE COMPLETED', canvas.width / 2, statsStartY + 30);
+
+      // Draw squat stats
+      const statsCenterY = statsStartY + 80;
+      
+      // Draw squat count (large)
+      ctx.fillStyle = '#FF0000';
+      ctx.font = 'bold 120px "URW Geometric"';
+      ctx.textAlign = 'right';
+      ctx.fillText(totalSquats.toString(), canvas.width / 2 - 60, statsCenterY);
+
+      // Draw "SQUATS" label vertical
+      ctx.save();
+      ctx.fillStyle = '#FF0000';
+      ctx.font = 'bold 20px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX - 60, statsCenterY + 20);
+      ctx.translate(canvas.width / 2 + 10, statsCenterY + 30);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 80px "URW Geometric"';
-      ctx.textAlign = 'center';
-      ctx.fillText('/', statsCenterX - 10, statsCenterY);
-
-      ctx.fillStyle = '#ffffff';
+      // Draw separator "/"
+      ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 100px "URW Geometric"';
-      ctx.textAlign = 'left';
-      ctx.fillText('100', statsCenterX + 20, statsCenterY);
+      ctx.textAlign = 'center';
+      ctx.fillText('/', canvas.width / 2 + 40, statsCenterY);
 
+      // Draw "100"
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 120px "URW Geometric"';
+      ctx.textAlign = 'left';
+      ctx.fillText('100', canvas.width / 2 + 80, statsCenterY);
+
+      // Draw "SECONDS" label vertical
       ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 15px "URW Geometric"';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 16px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX + 185, statsCenterY + 20);
+      ctx.translate(canvas.width - 30, statsCenterY + 40);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
