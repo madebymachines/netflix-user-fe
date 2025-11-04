@@ -14,7 +14,6 @@ export default function OverlayMenu({
   open,
   onClose,
   items,
-  contentHeight = 590,
 }: {
   open: boolean;
   onClose: () => void;
@@ -40,14 +39,10 @@ export default function OverlayMenu({
   if (!open) return null;
 
   return (
-    <div
-      className="absolute left-0 z-[80] w-full"
-      style={{ top: -50, height: 50 + contentHeight }}
-    >
+    <div className="fixed inset-0 z-[80]">
       <div className="absolute inset-0 bg-black/75" onClick={onClose} />
-
-      <div className="relative z-10">
-        <Header onMenu={onClose} menuOpen className="bg-white" />
+      <div className="relative z-10 h-full w-full">
+        <Header onMenu={onClose} menuOpen sticky={false} className="bg-black" />
 
         <nav className="px-5 pt-6 space-y-6">
           {items.map((it, i) => {

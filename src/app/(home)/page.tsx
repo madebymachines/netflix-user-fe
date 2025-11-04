@@ -17,6 +17,21 @@ const LOGO_TOP = 120;
 const BOTTLE_TOP = 240;
 const SCROLL_CUE_TOP = BALL_H + GAP_AFTER_BALL + BTN_H + 10;
 
+function RoundThumb({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="h-14 w-14 rounded-full bg-white border border-white/20 overflow-hidden relative flex-shrink-0 p-1">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="56px"
+        style={{ objectFit: "contain" }}
+        priority={false}
+      />
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
@@ -45,7 +60,9 @@ export default function LandingPage() {
   return (
     <>
       <MobileShell
-        header={<Header onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />}
+        header={
+          <Header fixed onMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
+        }
         contentHeight={CONTENT_H}
       >
         {/* BG bola (tinggi tetap) */}
@@ -79,7 +96,7 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Botol: posisi Y tetap (pakai top, bukan bottom) */}
+          {/* Botol: posisi Y tetap */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{ top: BOTTLE_TOP }}
@@ -94,7 +111,7 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Tombol Unlock – posisikan segera setelah bola (tetap) */}
+          {/* Tombol Unlock */}
           <div
             className="absolute left-1/2 -translate-x-1/2"
             style={{ top: BALL_H + GAP_AFTER_BALL }}
@@ -110,7 +127,7 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Scroll cue – tetap */}
+          {/* Scroll cue */}
           <button
             onClick={goMore}
             className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center text-white"
@@ -131,7 +148,7 @@ export default function LandingPage() {
         />
       </MobileShell>
 
-      {/* Section bawah (lebar responsif, tinggi bebas) */}
+      {/* Section bawah */}
       <section className="w-full bg-black flex justify-center">
         <div className="relative w-full max-w-screen-md" ref={moreRef}>
           <div className="relative w-full min-h-[940px] overflow-hidden">
@@ -147,14 +164,17 @@ export default function LandingPage() {
                 <span className="text-red-500">EXCITING</span> REWARDS AWAIT!
               </h2>
 
-              {/* Rewards list – style seperti contoh kanan */}
+              {/* Rewards list */}
               <div className="mx-auto w-[300px] space-y-5 p-3">
                 {/* GRAND PRIZE */}
                 <div className="flex items-start gap-4">
-                  <span className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+                  <RoundThumb
+                    src="/images/Grand_Prize.png"
+                    alt="Fitness First & Celebrity Fitness"
+                  />
                   <div>
                     <div className="uppercase font-extrabold tracking-wide text-[14px]">
-                      GRAND PRIZE
+                      Grand Prize 5x per month
                     </div>
                     <p className="text-[12px] leading-snug opacity-90">
                       WIN 3 months of dual brand gym memberships at Fitness
@@ -163,16 +183,18 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* GUARANTEED REWARD */}
+                {/* WEEKLY PRIZE */}
                 <div className="flex items-start gap-4">
-                  <span className="h-14 w-14 rounded-full bg-white/10 border border-white/20 flex-shrink-0" />
+                  <RoundThumb
+                    src="/images/Weekly_Prize.png"
+                    alt="100PLUS PRO Kit"
+                  />
                   <div>
                     <div className="uppercase font-extrabold tracking-wide text-[14px]">
-                      GUARANTEED REWARD
+                      Weekly Prizes 20x per month
                     </div>
                     <p className="text-[12px] leading-snug opacity-90">
-                      FREE 3 days gym trial at Fitness First &amp; Celebrity
-                      Fitness
+                      WIN 100PLUS PRO Kit
                     </p>
                   </div>
                 </div>
@@ -182,7 +204,7 @@ export default function LandingPage() {
                 GUIDE TO <span className="text-red-500">JOIN</span>
               </h3>
 
-              {/* GUIDE TO JOIN – zigzag tetap */}
+              {/* GUIDE TO JOIN – zigzag */}
               <div className="relative mx-auto w-[300px] rounded-md px-4 text-white isolate">
                 {[
                   {
@@ -203,11 +225,8 @@ export default function LandingPage() {
                   },
                 ].map((s, i) => {
                   const INDENT = 36;
-                  const CIRCLE_L = -28;
-                  const CIRCLE_R = -10;
                   const isZag = i % 2 === 1;
                   const indent = isZag ? INDENT : 0;
-                  const circleLeft = isZag ? CIRCLE_R : CIRCLE_L;
 
                   return (
                     <div
@@ -215,10 +234,6 @@ export default function LandingPage() {
                       className="relative py-5"
                       style={{ marginLeft: indent }}
                     >
-                      <span
-                        className="absolute h-10 w-10 rounded-full bg-white/10 border border-white/20 pointer-events-none"
-                        style={{ left: circleLeft }}
-                      />
                       <div className="pl-12">
                         <div className="text-[22px] font-extrabold leading-none mb-1">
                           {s.n}

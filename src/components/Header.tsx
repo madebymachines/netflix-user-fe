@@ -9,6 +9,8 @@ type Props = {
   menuOpen?: boolean;
   rightSlot?: React.ReactNode;
   className?: string;
+  sticky?: boolean;
+  fixed?: boolean;
 };
 
 export default function Header({
@@ -18,11 +20,23 @@ export default function Header({
   menuOpen = false,
   rightSlot,
   className = "",
+  sticky = true,
+  fixed = false,
 }: Props) {
   return (
     <header
-      className={`w-full h-[50px] bg-white/98 flex items-center justify-between
-                  px-[clamp(12px,4vw,20px)] ${className}`}
+      className={[
+        fixed
+          ? "fixed top-0 left-0 right-0 z-40"
+          : sticky
+          ? "sticky top-0 z-40"
+          : "relative z-40",
+        "bg-black/60 backdrop-blur supports-[backdrop-filter]:bg-black/40",
+        "border-b border-white/10",
+        "w-full h-[50px] flex items-center justify-between",
+        "px-[clamp(12px,4vw,20px)]",
+        className,
+      ].join(" ")}
     >
       <div className="flex items-center gap-2">
         {onBack ? (
@@ -34,9 +48,11 @@ export default function Header({
             }}
             className="mr-1 p-1 -ml-1"
           >
-            <ArrowLeft className="w-6 h-6 text-black" />
+            {/* putih supaya kontras di bg gelap */}
+            <ArrowLeft className="w-6 h-6 text-white" />
           </button>
         ) : null}
+
         {/* Logo responsive: tinggi tetap, lebar mengikuti */}
         <Image
           src={logoSrc}
@@ -60,9 +76,9 @@ export default function Header({
           className="p-2 -mr-1"
         >
           {menuOpen ? (
-            <X className="w-7 h-7 text-black" />
+            <X className="w-7 h-7 text-white" />
           ) : (
-            <Menu className="w-7 h-7 text-black" />
+            <Menu className="w-7 h-7 text-white" />
           )}
         </button>
       </div>

@@ -1,23 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
-import MobileShell from "@/components/MobileShell";
-import Header from "@/components/Header";
-import OverlayMenu from "@/components/OverlayMenu";
-import { Upload, Trash2, AlertTriangle } from "lucide-react";
-import api from "@/lib/axios";
-import { isAxiosError } from "axios";
-
-type Method = "RECEIPT" | "MEMBER_GYM";
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
+import MobileShell from '@/components/MobileShell';
+import Header from '@/components/Header';
+import OverlayMenu from '@/components/OverlayMenu';
+import { Upload, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import api from '@/lib/axios';
+import { isAxiosError } from 'axios';
+import { compressImage } from '@/utils/imageCompressor';
 
 export default function VerifyPurchasePage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [method, setMethod] = useState<Method>("RECEIPT");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
@@ -25,19 +24,12 @@ export default function VerifyPurchasePage() {
   const CONTENT_H = 590;
 
   const sp = useSearchParams();
-  const rejected = sp.get("rejected") === "1";
-  const rejectMsg = sp.get("msg") || "";
-
-  useEffect(() => {
-    const m = (sp.get("method") as Method) || "RECEIPT";
-    setMethod(m);
-    clearFile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sp]);
+  const rejected = sp.get('rejected') === '1';
+  const rejectMsg = sp.get('msg') || '';
 
   useEffect(() => {
     const prev = document.body.style.overflow;
-    if (menuOpen) document.body.style.overflow = "hidden";
+    if (menuOpen) document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
@@ -45,94 +37,97 @@ export default function VerifyPurchasePage() {
 
   useEffect(() => {
     return () => {
-      if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
+      if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
     };
   }, [preview]);
 
   const authMenu = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Profile", href: "/profile" },
-    { label: "Leaderboard", href: "/leaderboard" },
-    { label: "Logout", onClick: () => alert("Logout…") },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Profile', href: '/profile' },
+    { label: 'Leaderboard', href: '/leaderboard' },
+    { label: 'Logout', onClick: () => alert('Logout…') },
   ];
 
   const openPicker = () => inputRef.current?.click();
 
-  const handleFiles = (files?: FileList | null) => {
+  const handleFiles = async (files?: FileList | null) => {
     if (!files || files.length === 0) return;
     const f = files[0];
 
-    const isImage = /^image\//.test(f.type);
-    const under10MB = f.size <= 10 * 1024 * 1024;
-    if (!isImage) return setError("File harus berupa gambar (JPG/PNG/HEIC).");
-    if (!under10MB) return setError("Ukuran maksimum 10MB.");
-
-    const url = URL.createObjectURL(f);
     setError(null);
-    setFile(f);
-    setPreview((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return url;
-    });
-  };
 
-  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
+    const isImage = /^image\//.test(f.type);
+    if (!isImage) {
+      setError('File harus berupa gambar (JPG/PNG/HEIC).');
+      return;
+    }
+
+    const under10MB = f.size <= 10 * 1024 * 1024;
+    if (!under10MB) {
+      setError('Ukuran file mentah maksimal 10MB sebelum kompresi.');
+      return;
+    }
+
+    setIsCompressing(true);
+    try {
+      // Kompres gambar dengan target di bawah 5MB
+      const compressedFile = await compressImage(f, { maxSizeMB: 4.5 });
+
+      const url = URL.createObjectURL(compressedFile);
+      setFile(compressedFile);
+      setPreview((prev) => {
+        if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+        return url;
+      });
+    } catch (e) {
+      setError('Gagal memproses gambar. Silakan coba file lain.');
+      console.error(e);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const clearFile = () => {
-    if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
+    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
     setFile(null);
     setPreview(null);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const onSubmit: React.FormEventHandler = async (e) => {
     e.preventDefault();
-    if (!file || submitting) return;
+    if (!file || submitting || isCompressing) return;
 
     try {
       setSubmitting(true);
       setError(null);
 
       const fd = new FormData();
-      fd.append("receiptImage", file);
-      fd.append("type", method); // RECEIPT | MEMBER_GYM
+      fd.append('receiptImage', file);
+      fd.append('type', 'RECEIPT'); // selalu RECEIPT
 
-      await api.post("/user/purchase-verification", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
+      await api.post('/user/purchase-verification', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      router.replace("/dashboard");
+      router.replace('/dashboard');
     } catch (err: unknown) {
       const msg = isAxiosError<{ message?: string }>(err)
         ? err.response?.data?.message || err.message
-        : "Failed to upload image.";
+        : 'Failed to upload image.';
       setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const title =
-    method === "RECEIPT"
-      ? rejected
-        ? "Re-Verify Your Purchase!"
-        : "Verify Your Purchase!"
-      : "Verify Your Membership!";
+  const title = rejected ? 'Re-Verify Your Purchase!' : 'Verify Your Purchase!';
+  const desc = rejected
+    ? 'We apologize, your proof of purchase did not pass verification, please re-upload with a valid image.'
+    : 'To continue, please upload full receipt / proof of purchase of 100PLUS Drink below.';
 
-  const desc =
-    method === "RECEIPT"
-      ? rejected
-        ? "We apologize, your proof of purchase did not pass verification, please re-upload with a valid image."
-        : "To continue, please upload full receipt / proof of purchase of 100PLUS Drink below."
-      : "To continue, please upload a photo of the front of your gym membership card.";
-
-  const uploadLabel =
-    method === "RECEIPT" ? "Upload Receipt Here" : "Upload Card Photo Here";
-
-  const maxDrop =
-    method === "MEMBER_GYM" ? (rejected ? 230 : 260) : rejected ? 270 : 300;
+  const uploadLabel = 'Upload Receipt Here';
+  const maxDrop = rejected ? 270 : 300;
 
   return (
     <MobileShell
@@ -146,7 +141,7 @@ export default function VerifyPurchasePage() {
           alt=""
           fill
           sizes="100vw"
-          style={{ objectFit: "cover", objectPosition: "top" }}
+          style={{ objectFit: 'cover', objectPosition: 'top' }}
           className="opacity-25"
           priority
         />
@@ -159,42 +154,8 @@ export default function VerifyPurchasePage() {
         className="relative z-10 h-full w-full px-5 pt-5 pb-6 text-white flex flex-col min-h-full"
       >
         <p className="mb-3 text-center text-[11px] opacity-80">
-          Choose Method to Verified Your Account!
+          Verify Your Account via Product Purchase
         </p>
-
-        {/* Toggle buttons */}
-        <div className="mx-auto mb-5 flex w-full max-w-[320px] gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("RECEIPT");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "RECEIPT"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            PRODUCT PURCHASE
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("MEMBER_GYM");
-              clearFile();
-            }}
-            className={[
-              "flex-1 rounded-md px-3 py-2 text-[12px] font-extrabold tracking-wide transition",
-              method === "MEMBER_GYM"
-                ? "bg-white text-black shadow"
-                : "border border-white/60 text-white",
-            ].join(" ")}
-          >
-            GYM MEMBER
-          </button>
-        </div>
 
         {/* Title & description */}
         <h1 className="mb-2 text-center text-[24px] font-extrabold tracking-wide">
@@ -208,7 +169,7 @@ export default function VerifyPurchasePage() {
         {rejected && (
           <div className="mx-auto mb-3 flex max-w-[320px] items-start gap-2 rounded-md border border-red-400/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-300">
             <AlertTriangle className="mt-[2px] h-4 w-4" />
-            <span>{rejectMsg || "Reason: invalid or unreadable receipt."}</span>
+            <span>{rejectMsg || 'Reason: invalid or unreadable receipt.'}</span>
           </div>
         )}
 
@@ -221,13 +182,20 @@ export default function VerifyPurchasePage() {
             }}
             onDragOver={(e) => e.preventDefault()}
             className={[
-              "relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20",
-              preview ? "border-white/20" : "border-white/60 border-dashed",
-              "h-full min-h-[210px]",
-            ].join(" ")}
+              'relative mx-auto flex w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border-2 bg-black/20',
+              preview || isCompressing
+                ? 'border-white/20'
+                : 'border-white/60 border-dashed',
+              'h-full min-h-[210px]',
+            ].join(' ')}
             style={{ maxHeight: `${maxDrop}px` }}
           >
-            {!preview ? (
+            {isCompressing ? (
+              <div className="flex flex-col items-center gap-3 text-white">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span>Compressing...</span>
+              </div>
+            ) : !preview ? (
               <div className="pointer-events-none flex flex-col items-center gap-3">
                 <Upload className="h-8 w-8 opacity-80" />
                 <span className="text-[13px] opacity-90">{uploadLabel}</span>
@@ -262,18 +230,6 @@ export default function VerifyPurchasePage() {
           </div>
         </div>
 
-        {method === "MEMBER_GYM" && (
-          <>
-            <div className="mx-auto mt-4 h-px w-[85%] max-w-[340px] bg-white/20" />
-            <p className="mx-auto mt-2 max-w-[320px] text-center text-[12px] opacity-90">
-              This verification is only for member of <br />
-              <span className="font-extrabold text-[20px]">
-                Fitness First or Celebrity Fitness
-              </span>
-            </p>
-          </>
-        )}
-
         {/* Error */}
         {error && (
           <p className="mt-2 text-center text-[12px] text-red-400">{error}</p>
@@ -281,15 +237,15 @@ export default function VerifyPurchasePage() {
 
         <button
           type="submit"
-          disabled={!file || submitting}
+          disabled={!file || submitting || isCompressing}
           className={[
-            "mt-4 mx-auto block w-full max-w-[320px] rounded-md py-3 text-[13px] font-extrabold tracking-wide transition",
-            !file || submitting
-              ? "cursor-not-allowed bg-white/20 text-white/60"
-              : "bg-white text-black",
-          ].join(" ")}
+            'mt-4 mx-auto block w-full max-w-[320px] rounded-md py-3 text-[13px] font-extrabold tracking-wide transition',
+            !file || submitting || isCompressing
+              ? 'cursor-not-allowed bg-white/20 text-white/60'
+              : 'bg-white text-black',
+          ].join(' ')}
         >
-          {submitting ? "UPLOADING…" : "SUBMIT"}
+          {submitting ? 'UPLOADING…' : 'SUBMIT'}
         </button>
       </form>
 
