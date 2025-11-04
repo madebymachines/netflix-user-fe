@@ -139,7 +139,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     await loadFonts();
     
     canvas.width = 400;
-    canvas.height = 760;
+    canvas.height = 760; // Tetap sama
     
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -148,93 +148,77 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     const logoY = 10;
     
     const gridStartY = logoHeight + 20;
-    const photoWidth = canvas.width / 2; // 200px width
-    const photoHeight = photoWidth * 1.4; // 280px height (portrait ratio 5:7)
-    const gridHeight = photoHeight * 2; // Total grid height for 2 rows
+    const photoWidth = canvas.width / 2; // 200px
+    const photoHeight = photoWidth * 1.4; // 280px
+    const gridHeight = photoHeight * 2;
     
     try {
-      // Load and draw logo with fixed size
+      // Load and draw logo
       try {
         const logoImg = await loadImage('./images/logo2.png');
-        
-        // Fixed logo dimensions to match the Image component (205x73)
         const logoDisplayWidth = 205;
         const logoDisplayHeight = 73;
-        
-        // Center the logo horizontally
         const logoX = (canvas.width - logoDisplayWidth) / 2;
         const logoYPos = logoY + (logoHeight - logoDisplayHeight) / 2;
-        
         ctx.drawImage(logoImg, logoX, logoYPos, logoDisplayWidth, logoDisplayHeight);
       } catch (logoError) {
         console.error('Error loading logo:', logoError);
-        // Fallback text logo
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('UNLOCK YOUR 100', canvas.width / 2, logoY + logoHeight / 2);
       }
 
-      // Draw photos in grid with improved error handling and overlays
+      // Draw photos in grid
       for (let i = 0; i < 4; i++) {
         const photoSrc = photos[i];
         const x = (i % 2) * photoWidth;
         const y = gridStartY + Math.floor(i / 2) * photoHeight;
         
+        // Label untuk setiap photo
+        const phaseLabels = ['Hydrate', 'Round 1', 'Recovery', 'Final Photo'];
+        
         if (photoSrc && photoSrc.trim() !== '') {
           try {
             const img = await loadImage(photoSrc);
-            
-            // Draw the image
             ctx.drawImage(img, x, y, photoWidth, photoHeight);
 
-            // Add overlays based on photo index
+            // Add overlays berdasarkan index
             if (i === 0) {
+              // Hydrate - sama seperti sebelumnya
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
               const bannerHeight = 25;
               const bannerY = y + photoHeight * 0.65;
-              
-              // Progress percentage (you can make this dynamic based on your app state)
               const progressPercent = 0.90;
               const progressWidth = bannerWidth * progressPercent;
               
-              // Draw background (black instead of transparent)
               ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
               ctx.beginPath();
               ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 5);
               ctx.fill();
               
-              // Draw progress bar (red part)
               ctx.fillStyle = '#FF0000';
               ctx.beginPath();
               ctx.roundRect(bannerX, bannerY, progressWidth, bannerHeight, [5, 0, 0, 5]);
               ctx.fill();
               
-              // Draw text
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 12px "URW Geometric"';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
               ctx.fillText('HYDRATE AND ENERGIZE', x + photoWidth/2, bannerY + bannerHeight/2);
               
-              // Draw bottle icon at the end of progress bar
               try {
                 const bottleImg = await loadImage('./images/bottle.png');
                 const bottleSize = 30;
-    
-                // Posisi X: tepat di ujung kanan progress bar
                 const bottleX = bannerX + progressWidth - bottleSize/2;
-                
-                // Posisi Y: DI ATAS progress bar dengan jarak yang cukup
-                const bottleY = bannerY - bottleSize - 1; // 5px gap di atas bar
-                
+                const bottleY = bannerY - bottleSize - 1;
                 ctx.drawImage(bottleImg, bottleX, bottleY, bottleSize, bottleSize);
               } catch (bottleError) {
                 console.error('Error loading bottle image:', bottleError);
               }
               
-              // Black subtitle banner (unchanged)
               const gap = 5;
               const blackBannerY = bannerY + bannerHeight + gap;
               const blackBannerHeight = 18;
@@ -249,15 +233,14 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 10px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle'; // Add this for vertical centering
+              ctx.textBaseline = 'middle';
               ctx.fillText('BEFORE UNLOCK YOUR 100', x + photoWidth/2, blackBannerY + blackBannerHeight/2);
             }
             else if (i === 1) {
+              // Round 1 - sama seperti sebelumnya
               const counterAreaY = y + photoHeight * 0.55;
               const counterAreaHeight = photoHeight * 0.40;
-              
               const actualCount = round1Count;
-              
               const centerY = counterAreaY + counterAreaHeight/2;
               
               ctx.save();
@@ -280,29 +263,22 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.fillText('REP', x + photoWidth/2 + 25, centerY - 15);
             }
             else if (i === 2) {
+              // Recovery - sama seperti sebelumnya
               const bannerWidth = photoWidth * 0.85;
               const bannerX = x + (photoWidth - bannerWidth) / 2;
               const bannerHeight = 25;
-              const bannerY = y + photoHeight * 0.65; // atau sesuai perubahan sebelumnya
-              
-              // Progress percentage
+              const bannerY = y + photoHeight * 0.65;
               const progressPercent = 0.90;
               const progressWidth = bannerWidth * progressPercent;
               
-              // Black subtitle banner - PINDAH KE ATAS (sebelum progress bar)
               const gap = 5;
               const blackBannerHeight = 18;
-              
-              // Measure text width and add padding
               ctx.font = 'bold 10px "URW Geometric"';
               const textMetrics = ctx.measureText("IT'S TIME TO");
               const blackBannerWidth = textMetrics.width + 20;
               const blackBannerX = x + (photoWidth - blackBannerWidth) / 2;
+              const blackBannerY = bannerY - blackBannerHeight - gap;
               
-              // Posisi black banner DI ATAS progress bar
-              const blackBannerY = bannerY - blackBannerHeight - gap; // Ubah ke atas
-              
-              // Draw black banner terlebih dahulu (di atas)
               ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
               ctx.beginPath();
               ctx.roundRect(blackBannerX, blackBannerY, blackBannerWidth, blackBannerHeight, 5);
@@ -313,27 +289,22 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.textBaseline = 'middle';
               ctx.fillText("IT'S TIME TO", x + photoWidth/2, blackBannerY + blackBannerHeight/2);
               
-              // Kemudian draw progress bar (di bawah black banner)
-              // Draw background (black)
               ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
               ctx.beginPath();
               ctx.roundRect(bannerX, bannerY, bannerWidth, bannerHeight, 5);
               ctx.fill();
               
-              // Draw progress bar (red part)
               ctx.fillStyle = '#FF0000';
               ctx.beginPath();
               ctx.roundRect(bannerX, bannerY, progressWidth, bannerHeight, [5, 0, 0, 5]);
               ctx.fill();
               
-              // Draw text
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 12px "URW Geometric"';
               ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle'; 
+              ctx.textBaseline = 'middle';
               ctx.fillText('RECOVER & REPEAT STRONGER', x + photoWidth/2, bannerY + bannerHeight/2);
               
-              // Draw bottle icon (tetap sama)
               try {
                 const bottleImg = await loadImage('./images/bottle.png');
                 const bottleSize = 30;
@@ -345,12 +316,15 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               }
             }
             else if (i === 3) {
+              // Final Photo - BARU: Tampilkan dengan styling khusus
               const counterAreaY = y + photoHeight * 0.55;
               const counterAreaHeight = photoHeight * 0.40;
-              
               const actualCount = round2Count;
-              
               const centerY = counterAreaY + counterAreaHeight/2;
+              
+              // Tambahkan background semi-transparan untuk round 2
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+              ctx.fillRect(x, y + photoHeight * 0.5, photoWidth, photoHeight * 0.5);
               
               ctx.save();
               ctx.fillStyle = '#FFFFFF';
@@ -358,7 +332,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               ctx.textAlign = 'center';
               ctx.translate(x + 45, centerY - 10);
               ctx.rotate(-Math.PI / 2);
-              ctx.fillText('ROUND 2', 0, 0);
+              ctx.fillText('FINAL', 0, 0);
               ctx.restore();
               
               ctx.fillStyle = '#FF0000';
@@ -377,12 +351,11 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             drawPlaceholder(ctx, i, photoWidth, photoHeight, gridStartY);
           }
         } else {
-          // Draw placeholder for missing photo
           drawPlaceholder(ctx, i, photoWidth, photoHeight, gridStartY);
         }
       }
       
-      // Draw stats section with proper spacing
+      // Draw stats section
       const statsStartY = gridStartY + gridHeight + 10;
       const statsHeight = 120;
       
@@ -392,42 +365,37 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       const statsCenterX = canvas.width / 2;
       const statsCenterY = statsStartY + 60;
       
-      // Draw squat count
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 100px "URW Geometric"';
       ctx.textAlign = 'right';
       const countText = totalSquats.toString();
       ctx.fillText(countText, statsCenterX - 80, statsCenterY);
 
-      // Draw "SQUATS" label
       ctx.save();
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle'; 
-      ctx.translate(statsCenterX - 60, statsCenterY + 20); 
+      ctx.textBaseline = 'middle';
+      ctx.translate(statsCenterX - 60, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
-      // Draw separator "/"
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 80px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.fillText('/', statsCenterX - 10, statsCenterY);
 
-      // Draw "100"
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 100px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.fillText('100', statsCenterX + 20, statsCenterY);
 
-      // Draw "SECONDS" label
       ctx.save();
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 15px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle'; 
+      ctx.textBaseline = 'middle';
       ctx.translate(statsCenterX + 185, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
@@ -456,8 +424,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       console.log('No grid image available for sharing');
       return;
     }
-
-    // await handleSubmitActivity();
 
     try {
       const response = await fetch(gridImage);
