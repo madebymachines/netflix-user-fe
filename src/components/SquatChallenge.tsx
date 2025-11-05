@@ -260,7 +260,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         }
         setTimeout(() => {
           setPhase('take-picture');
-          setTimeRemaining(3); // Countdown 3 detik untuk ambil foto
+          setTimeRemaining(5); 
         }, 1000);
       }
       

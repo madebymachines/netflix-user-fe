@@ -154,12 +154,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
       // Draw stats section at bottom
       const statsStartY = photoY + photoHeight + 20;
-      
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 18px "URW Geometric"';
-      ctx.textAlign = 'center';
-      ctx.fillText('CHALLENGE COMPLETED', canvas.width / 2, statsStartY + 30);
-
       // Draw squat stats
       const statsCenterY = statsStartY + 80;
       
@@ -304,60 +298,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               className="w-full h-auto rounded-lg shadow-lg mb-4" 
             />
           )}
-        </div>
-
-        {/* PERBAIKAN #2: Responsive Stats Section (seperti versi lama) */}
-        <div className="w-full max-w-sm px-4 mt-6">
-          {/* Challenge Completed Header */}
-          <div className="text-center mb-4">
-            <h3 className="text-white text-lg font-bold font-urw tracking-wide">
-              CHALLENGE COMPLETED
-            </h3>
-          </div>
-
-          {/* Stats Display - Responsive */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-            {/* Squats Count */}
-            <div className="flex items-baseline gap-1">
-              <div className="text-red-500 font-bold" style={{ fontSize: 'clamp(3rem, 15vw, 5rem)' }}>
-                {totalSquats}
-              </div>
-              <div className="text-red-500 font-bold text-sm sm:text-base whitespace-nowrap">
-                SQUATS
-              </div>
-            </div>
-
-            {/* Separator */}
-            <div className="text-white font-bold" style={{ fontSize: 'clamp(2rem, 12vw, 4rem)' }}>
-              /
-            </div>
-
-            {/* Time Duration */}
-            <div className="flex items-baseline gap-1">
-              <div className="text-white font-bold" style={{ fontSize: 'clamp(3rem, 15vw, 5rem)' }}>
-                100
-              </div>
-              <div className="text-white font-bold text-sm sm:text-base whitespace-nowrap">
-                SECONDS
-              </div>
-            </div>
-          </div>
-
-          {/* Round Breakdown */}
-          <div className="bg-gray-900 rounded-lg p-3 mb-6 space-y-2 text-center">
-            <div className="text-gray-400 text-xs">Round Breakdown</div>
-            <div className="flex justify-around text-sm">
-              <div>
-                <div className="text-red-500 font-bold">{round1Count}</div>
-                <div className="text-gray-400 text-xs">Round 1</div>
-              </div>
-              <div className="w-px bg-gray-700"></div>
-              <div>
-                <div className="text-red-500 font-bold">{round2Count}</div>
-                <div className="text-gray-400 text-xs">Round 2</div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Share Button */}
