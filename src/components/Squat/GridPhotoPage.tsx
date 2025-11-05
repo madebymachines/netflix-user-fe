@@ -164,8 +164,9 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 90px "URW Geometric"';
       ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
       const countText = totalSquats.toString();
-      ctx.fillText(countText, statsCenterX - 70, statsCenterY);
+      ctx.fillText(countText, statsCenterX - 70, statsCenterY + 15);
 
       // Draw SQUATS label (vertical)
       ctx.save();
@@ -173,7 +174,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX - 50, statsCenterY + 5);
+      ctx.translate(statsCenterX - 50, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
@@ -182,13 +183,15 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 75px "URW Geometric"';
       ctx.textAlign = 'center';
-      ctx.fillText('/', statsCenterX + 10, statsCenterY);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('/', statsCenterX + 10, statsCenterY + 15);
 
       // Draw 100 (target)
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 90px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.fillText('100', statsCenterX + 40, statsCenterY);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('100', statsCenterX + 40, statsCenterY + 15);
 
       // Draw SECONDS label (vertical)
       ctx.save();
@@ -196,7 +199,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.font = 'bold 16px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX + 165, statsCenterY + 5);
+      ctx.translate(statsCenterX + 165, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
