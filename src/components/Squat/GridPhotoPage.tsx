@@ -152,7 +152,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       }
 
       // Draw stats section
-      const statsStartY = gridStartY + gridHeight + 10;
+      const photoEndY = photoY + photoHeight; 
+      const statsStartY = photoEndY + 20;
       const statsHeight = 120;
       
       ctx.fillStyle = '#000000';
