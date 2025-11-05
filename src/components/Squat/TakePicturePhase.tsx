@@ -91,29 +91,18 @@ const TakePicturePhase: React.FC<TakePicturePhaseProps> = ({
 
   return (
     <div className="relative w-full h-full flex flex-col bg-black">
-      {/* Header with Logo */}
-      <div className="w-full px-4 pt-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="text-red-600 text-sm font-bold">100PLUS</div>
-          <span className="text-gray-400 text-sm">PRO × PHYSICAL.ASIA</span>
-        </div>
-        <button className="text-white">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      {/* Main Title */}
-      <div className="w-full text-center py-4">
-        <h1 className="text-white text-2xl font-bold">UNLOCK YOUR 100</h1>
-      </div>
-
       {/* Video Container */}
       <div className="relative flex-1 flex items-center justify-center px-4">
-        <div className="relative w-full max-w-sm aspect-video bg-black rounded-lg overflow-hidden">
+        <div className="relative w-full max-w-sm aspect-video bg-black rounded-lg overflow-hidden" style={{ 
+          aspectRatio: '3/4',
+          // width: '100%',
+          // maxWidth: 'min(90vw, 60vh * 0.75)',
+          height: 'auto',
+          maxHeight: '60vh',
+          minHeight: '300px',
+          marginBottom: '20px',
+          borderRadius: '5px'
+        }}>
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
@@ -177,8 +166,8 @@ const TakePicturePhase: React.FC<TakePicturePhaseProps> = ({
 
       {/* Instructions */}
       <div className="w-full text-center py-6 px-4">
-        <div className="text-red-600 text-sm font-bold tracking-wider mb-2">GET READY TO</div>
-        <div className="text-white text-xl font-bold">POSE FOR A PHOTO</div>
+        <div className="text-[#FF0000] text-[30px] font-vancouver font-regular leading-none mb-2">GET READY TO</div>
+        <div className="text-white text-[30px] font-vancouver font-regular leading-none">POSE FOR A PHOTO</div>
       </div>
 
       {/* CSS Animations */}
