@@ -99,35 +99,34 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     try {
-      // Draw logo at top
+      const logoHeight = 80;
+      const logoY = 10;
+      const gridStartY = logoHeight + 20;
+      const photoX = 20;
+      const photoY = 100;
+      const photoWidth = canvas.width - 40;
+      const photoHeight = (photoWidth * 4) / 3;
+      const gridHeight = photoHeight * 2;
+
       try {
         const logoImg = await loadImage('./images/logo2.png');
         const logoDisplayWidth = 205;
         const logoDisplayHeight = 73;
         const logoX = (canvas.width - logoDisplayWidth) / 2;
-        const logoYPos = 10;
+        const logoYPos = logoY + (logoHeight - logoDisplayHeight) / 2;
         ctx.drawImage(logoImg, logoX, logoYPos, logoDisplayWidth, logoDisplayHeight);
       } catch (logoError) {
         console.error('Error loading logo:', logoError);
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('UNLOCK YOUR 100', canvas.width / 2, 50);
+        ctx.fillText('UNLOCK YOUR 100', canvas.width / 2, logoY + logoHeight / 2);
       }
-
-      // Draw large photo in center
-      const photoX = 20;
-      const photoY = 100;
-      const photoWidth = canvas.width - 40;
-      const photoHeight = (photoWidth * 4) / 3;
 
       if (photo && photo.trim() !== '') {
         try {
           const img = await loadImage(photo);
           ctx.drawImage(img, photoX, photoY, photoWidth, photoHeight);
-          
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-          ctx.fillRect(photoX, photoY + photoHeight - 100, photoWidth, 100);
         } catch (imageError) {
           console.error('Error loading photo:', imageError);
           ctx.fillStyle = '#333333';
@@ -152,47 +151,48 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
         ctx.fillText('Photo not available', canvas.width / 2, photoY + photoHeight / 2);
       }
 
-      // Draw stats section at bottom
-      const statsStartY = photoY + photoHeight + 20;
-      const statsCenterY = statsStartY + 80;
+      // Draw stats section
+      const statsStartY = gridStartY + gridHeight + 10;
+      const statsHeight = 120;
       
-      // Adjusted font sizes untuk single image layout
-      const squat_font_size = 80;
-      const slash_font_size = 70;
-      const hundred_font_size = 80;
-      const label_font_size = 16;
-
-      ctx.fillStyle = '#FF0000';
-      ctx.font = `bold ${squat_font_size}px "URW Geometric"`;
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, statsStartY, canvas.width, statsHeight);
+      
+      const statsCenterX = canvas.width / 2;
+      const statsCenterY = statsStartY + 60;
+      
+      ctx.fillStyle = '#ff0000';
+      ctx.font = 'bold 100px "URW Geometric"';
       ctx.textAlign = 'right';
-      ctx.fillText(totalSquats.toString(), canvas.width / 2 - 60, statsCenterY);
+      const countText = totalSquats.toString();
+      ctx.fillText(countText, statsCenterX - 80, statsCenterY);
 
       ctx.save();
-      ctx.fillStyle = '#FF0000';
-      ctx.font = `bold ${label_font_size}px "URW Geometric"`;
+      ctx.fillStyle = '#ff0000';
+      ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(canvas.width / 2 + 10, statsCenterY + 25);
+      ctx.translate(statsCenterX - 60, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${slash_font_size}px "URW Geometric"`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 80px "URW Geometric"';
       ctx.textAlign = 'center';
-      ctx.fillText('/', canvas.width / 2 + 40, statsCenterY);
+      ctx.fillText('/', statsCenterX - 10, statsCenterY);
 
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${hundred_font_size}px "URW Geometric"`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 100px "URW Geometric"';
       ctx.textAlign = 'left';
-      ctx.fillText('100', canvas.width / 2 + 80, statsCenterY);
+      ctx.fillText('100', statsCenterX + 20, statsCenterY);
 
       ctx.save();
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold ${label_font_size}px "URW Geometric"`;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 15px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(canvas.width - 30, statsCenterY + 25);
+      ctx.translate(statsCenterX + 185, statsCenterY + 20);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
@@ -300,7 +300,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
             <img 
               src={gridImage} 
               alt="Squat Challenge Grid" 
-              className="w-full h-auto rounded-lg shadow-lg mb-4" 
+              className="w-full h-auto rounded-lg shadow-lg" 
             />
           )}
         </div>
