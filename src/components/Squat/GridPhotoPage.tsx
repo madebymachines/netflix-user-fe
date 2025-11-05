@@ -154,40 +154,45 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
       // Draw stats section at bottom
       const statsStartY = photoY + photoHeight + 20;
-      // Draw squat stats
       const statsCenterY = statsStartY + 80;
       
+      // Adjusted font sizes untuk single image layout
+      const squat_font_size = 80;
+      const slash_font_size = 70;
+      const hundred_font_size = 80;
+      const label_font_size = 16;
+
       ctx.fillStyle = '#FF0000';
-      ctx.font = 'bold 120px "URW Geometric"';
+      ctx.font = `bold ${squat_font_size}px "URW Geometric"`;
       ctx.textAlign = 'right';
       ctx.fillText(totalSquats.toString(), canvas.width / 2 - 60, statsCenterY);
 
       ctx.save();
       ctx.fillStyle = '#FF0000';
-      ctx.font = 'bold 20px "URW Geometric"';
+      ctx.font = `bold ${label_font_size}px "URW Geometric"`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(canvas.width / 2 + 10, statsCenterY + 30);
+      ctx.translate(canvas.width / 2 + 10, statsCenterY + 25);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 100px "URW Geometric"';
+      ctx.font = `bold ${slash_font_size}px "URW Geometric"`;
       ctx.textAlign = 'center';
       ctx.fillText('/', canvas.width / 2 + 40, statsCenterY);
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 120px "URW Geometric"';
+      ctx.font = `bold ${hundred_font_size}px "URW Geometric"`;
       ctx.textAlign = 'left';
       ctx.fillText('100', canvas.width / 2 + 80, statsCenterY);
 
       ctx.save();
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 16px "URW Geometric"';
+      ctx.font = `bold ${label_font_size}px "URW Geometric"`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.translate(canvas.width - 30, statsCenterY + 40);
+      ctx.translate(canvas.width - 30, statsCenterY + 25);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
       ctx.restore();
