@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { prepareActivitySubmission } from '@/utils/ActivityUtils';
 
-// Define interfaces for props
 interface GridPhotoPageProps {
   photo?: string;
   totalSquats: number;
@@ -10,14 +9,13 @@ interface GridPhotoPageProps {
   round2Count: number;
   onBack: () => void;
   onShare: () => void;
-  currentRound?: number; // Made optional
-  squatCount?: number; // Made optional
-  progressPercent?: number; // Made optional
-  hydrateProgress?: number; // 0-1
-  recoverProgress?: number; // 0-1
+  currentRound?: number;
+  squatCount?: number;
+  progressPercent?: number;
+  hydrateProgress?: number;
+  recoverProgress?: number;
 }
 
-// Grid Photo Component
 const GridPhotoPage: React.FC<GridPhotoPageProps> = ({ 
   photo, 
   totalSquats, 
@@ -31,13 +29,11 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
   const [isSubmissionComplete, setIsSubmissionComplete] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   
-  // Get auth store functions
   const { submitActivity, isSubmittingActivity, stats } = useAuthStore();
 
   useEffect(() => {
     generateGridImage();
   }, [photo]);
-
 
   const handleSubmitActivity = async (): Promise<void> => {
     if (!gridImage) return;
@@ -69,50 +65,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     });
   };
 
-  // Helper function to draw placeholder for missing/failed images
-  const drawPlaceholder = (
-    ctx: CanvasRenderingContext2D, 
-    index: number, 
-    photoWidth: number, 
-    photoHeight: number, 
-    gridStartY: number
-  ): void => {
-    const x = (index % 2) * photoWidth;
-    const y = gridStartY + Math.floor(index / 2) * photoHeight;
-    
-    // Draw dark background
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(x, y, photoWidth, photoHeight);
-    
-    // Draw border
-    ctx.strokeStyle = '#666666';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 1, y + 1, photoWidth - 2, photoHeight - 2);
-    
-    // Add placeholder text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(
-      'Photo not available', 
-      x + photoWidth / 2, 
-      y + photoHeight / 2 - 10
-    );
-    
-    // Add phase label
-    const phaseLabels = ['Hydrate', 'Round 1', 'Recovery', 'Round 2'];
-    ctx.font = '12px Arial';
-    ctx.fillStyle = '#CCCCCC';
-    ctx.fillText(
-      phaseLabels[index] || `Phase ${index + 1}`, 
-      x + photoWidth / 2, 
-      y + photoHeight / 2 + 10
-    );
-  };
-
   const loadFonts = async (): Promise<void> => {
     try {
-      // Load all the fonts that are defined in your CSS
       await Promise.all([
         document.fonts.load('700 16px Gravtrac'),
         document.fonts.load('400 16px "URW Geometric"'),
@@ -138,7 +92,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
     await loadFonts();
     
-    // Canvas untuk single image yang lebih besar
     canvas.width = 400;
     canvas.height = 800;
     
@@ -166,19 +119,17 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       const photoX = 20;
       const photoY = 100;
       const photoWidth = canvas.width - 40;
-      const photoHeight = (photoWidth * 4) / 3; // 4:3 ratio atau sesuai kebutuhan
+      const photoHeight = (photoWidth * 4) / 3;
 
       if (photo && photo.trim() !== '') {
         try {
           const img = await loadImage(photo);
           ctx.drawImage(img, photoX, photoY, photoWidth, photoHeight);
           
-          // Add semi-transparent overlay di bawah untuk stats
           ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
           ctx.fillRect(photoX, photoY + photoHeight - 100, photoWidth, 100);
         } catch (imageError) {
           console.error('Error loading photo:', imageError);
-          // Draw placeholder
           ctx.fillStyle = '#333333';
           ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
           ctx.strokeStyle = '#666666';
@@ -190,7 +141,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
           ctx.fillText('Photo not available', canvas.width / 2, photoY + photoHeight / 2);
         }
       } else {
-        // Draw placeholder
         ctx.fillStyle = '#333333';
         ctx.fillRect(photoX, photoY, photoWidth, photoHeight);
         ctx.strokeStyle = '#666666';
@@ -205,7 +155,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       // Draw stats section at bottom
       const statsStartY = photoY + photoHeight + 20;
       
-      // Draw "CHALLENGE COMPLETED" header
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'center';
@@ -214,13 +163,11 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       // Draw squat stats
       const statsCenterY = statsStartY + 80;
       
-      // Draw squat count (large)
       ctx.fillStyle = '#FF0000';
       ctx.font = 'bold 120px "URW Geometric"';
       ctx.textAlign = 'right';
       ctx.fillText(totalSquats.toString(), canvas.width / 2 - 60, statsCenterY);
 
-      // Draw "SQUATS" label vertical
       ctx.save();
       ctx.fillStyle = '#FF0000';
       ctx.font = 'bold 20px "URW Geometric"';
@@ -231,19 +178,16 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
-      // Draw separator "/"
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 100px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.fillText('/', canvas.width / 2 + 40, statsCenterY);
 
-      // Draw "100"
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 120px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.fillText('100', canvas.width / 2 + 80, statsCenterY);
 
-      // Draw "SECONDS" label vertical
       ctx.save();
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 16px "URW Geometric"';
@@ -288,8 +232,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       if (navigator.canShare && navigator.canShare({ files: filesArray })) {
         await navigator.share({
           files: filesArray,
-          // title: 'My Squat Challenge Results',
-          // text: `I completed ${totalSquats} squats in the challenge!`
         });
         console.log("Image shared successfully");
       } else {
@@ -304,7 +246,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Error sharing the image:', error);
-        // Fallback to download
         const fileName = `squat_challenge_${Date.now()}.png`;
         const link = document.createElement('a');
         link.href = gridImage || '';
@@ -321,7 +262,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       className="w-full min-h-screen bg-black text-white flex flex-col" 
       style={{ 
         width: '100%',
-        // maxWidth: 'min(90vw, 60vh * 0.75)', 
         margin: "0 auto" 
       }}
     >
@@ -364,41 +304,74 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               className="w-full h-auto rounded-lg shadow-lg mb-4" 
             />
           )}
+        </div>
 
-          {/* Submission Status */}
-          {/* {isSubmittingActivity && (
-            <div className="w-full max-w-sm mb-2 p-2 bg-yellow-900 text-yellow-200 text-center rounded-md text-sm">
-              Submitting your challenge results...
-            </div>
-          )}
+        {/* PERBAIKAN #2: Responsive Stats Section (seperti versi lama) */}
+        <div className="w-full max-w-sm px-4 mt-6">
+          {/* Challenge Completed Header */}
+          <div className="text-center mb-4">
+            <h3 className="text-white text-lg font-bold font-urw tracking-wide">
+              CHALLENGE COMPLETED
+            </h3>
+          </div>
 
-          {isSubmissionComplete && (
-            <div className="w-full max-w-sm mb-2 p-2 bg-green-900 text-green-200 text-center rounded-md text-sm">
-              ✓ Challenge submitted! You've earned points!
+          {/* Stats Display - Responsive */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+            {/* Squats Count */}
+            <div className="flex items-baseline gap-1">
+              <div className="text-red-500 font-bold" style={{ fontSize: 'clamp(3rem, 15vw, 5rem)' }}>
+                {totalSquats}
+              </div>
+              <div className="text-red-500 font-bold text-sm sm:text-base whitespace-nowrap">
+                SQUATS
+              </div>
             </div>
-          )}
 
-          {submissionError && (
-            <div className="w-full max-w-sm mb-2 p-2 bg-red-900 text-red-200 text-center rounded-md text-sm">
-              ⚠ {submissionError}
+            {/* Separator */}
+            <div className="text-white font-bold" style={{ fontSize: 'clamp(2rem, 12vw, 4rem)' }}>
+              /
             </div>
-          )} */}
+
+            {/* Time Duration */}
+            <div className="flex items-baseline gap-1">
+              <div className="text-white font-bold" style={{ fontSize: 'clamp(3rem, 15vw, 5rem)' }}>
+                100
+              </div>
+              <div className="text-white font-bold text-sm sm:text-base whitespace-nowrap">
+                SECONDS
+              </div>
+            </div>
+          </div>
+
+          {/* Round Breakdown */}
+          <div className="bg-gray-900 rounded-lg p-3 mb-6 space-y-2 text-center">
+            <div className="text-gray-400 text-xs">Round Breakdown</div>
+            <div className="flex justify-around text-sm">
+              <div>
+                <div className="text-red-500 font-bold">{round1Count}</div>
+                <div className="text-gray-400 text-xs">Round 1</div>
+              </div>
+              <div className="w-px bg-gray-700"></div>
+              <div>
+                <div className="text-red-500 font-bold">{round2Count}</div>
+                <div className="text-gray-400 text-xs">Round 2</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Share Button */}
-        <div className='w-full max-w-sm px-4'>
+        <div className='w-full max-w-sm px-4 pb-6'>
           <button
             onClick={handleShare}
             disabled={!gridImage}
-            className={`w-full max-w-sm text-white py-1 px-8 rounded-md transition-colors flex items-center justify-center ${
+            className={`w-full text-white py-2 px-4 rounded-md transition-colors font-bold text-lg ${
               gridImage 
-                ? 'bg-[#FF0000] hover:bg-[#CC0000]' 
+                ? 'bg-red-600 hover:bg-red-700' 
                 : 'bg-gray-600 cursor-not-allowed'
             }`}
           >
-            <span className="text-white text-[24px] font-vancouver font-regular">
-              SHARE TO COLLECT POINTS
-            </span>
+            SHARE TO COLLECT POINTS
           </button>
         </div>
       </div>

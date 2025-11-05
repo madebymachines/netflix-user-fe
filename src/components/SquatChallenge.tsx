@@ -3,7 +3,6 @@ import {
   PoseLandmarker,
   FilesetResolver,
   DrawingUtils,
-  PoseLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 
 // Import utility classes
@@ -23,8 +22,6 @@ import GridPhotoPage from '../components/Squat/GridPhotoPage';
 // Type definitions
 type Phase = 'setup' | 'position-before-hydrate' | 'position-before-recovery' | 
              'hydrate' | 'recovery' | 'exercise' | 'go' | 'take-picture' | 'completed' | 'grid';
-
-// type PhotoType = 'hydrate' | 'round1Squat' | 'recovery' | 'round2Squat';
 
 type PhotoType = 'finalPhoto';
 
@@ -73,7 +70,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const [isPositionConfirmed, setIsPositionConfirmed] = useState<boolean>(false);
   const [bodyOutlineKey, setBodyOutlineKey] = useState<number>(0);
   // YouTube video ID for shorts
-  const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g"; // Replace with your YouTube Shorts ID
+  const YOUTUBE_VIDEO_ID: string = "eFEVKmp3M4g";
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,7 +81,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  // ✅ NEW: Ref untuk last frame buffer
   const lastFrameRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -112,7 +108,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       tempCtx.drawImage(video, 0, 0);
       const dataURL = tempCanvas.toDataURL('image/png');
       
-      // ✅ Validasi dataURL
       if (!dataURL || dataURL.length < 100) {
         console.error(`[${photoType}] Invalid dataURL generated`);
         return;
@@ -123,7 +118,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         [photoType]: dataURL
       }));
       
-      // ✅ Log dengan fallback indicator
       const fallbackIndicator = isFallback ? ' (FALLBACK)' : '';
       console.log(`✓ Screenshot taken for: ${photoType}${fallbackIndicator}`);
     } catch (error) {
@@ -210,7 +204,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setTimeRemaining(10);
       setProgressPercent(0);
       
-      // Trigger hydrate announcement immediately
       setTimeout(() => {
         if (!hasSpokenHydrate) {
           playAnnouncement('Hydrate and Energize your body');
@@ -220,14 +213,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       
     } else if (phase === 'hydrate') {
       console.log('Transitioning from hydrate to go phase');
-      // takeScreenshot('hydrate');
       setProgressPercent(100);
       
       setTimeout(() => {
         console.log('Setting phase to GO');
         setPhase('go');
         
-        // Play GO announcement
         setTimeout(() => {
           playAnnouncement('GO!');
         }, 100);
@@ -240,7 +231,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           squatCounterRef.current.resetCount();
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-          // ✅ Reset last frame buffer
           lastFrameRef.current = null;
         }, 2000);
       }, 1000);
@@ -248,20 +238,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     } else if (phase === 'exercise') {
       console.log(`Exercise phase complete for round ${currentRound}`);
       setProgressPercent(100);
-      
-      // // ✅ NEW: Fallback screenshot jika belum ada
-      // const photoKey = `round${currentRound}` as keyof SquatPhotoStatus;
-      // if (!hasSquatPhoto[photoKey] && lastFrameRef.current) {
-      //   console.warn(`⚠️ No squat detected in round ${currentRound}, using fallback screenshot`);
-      //   const photoType: PhotoType = currentRound === 1 ? 'round1Squat' : 'round2Squat';
-      //   setScreenshots(prev => ({
-      //     ...prev,
-      //     [photoType]: lastFrameRef.current!
-      //   }));
-      //   setHasSquatPhoto(prev => ({ ...prev, [photoKey]: true }));
-      // } else if (!hasSquatPhoto[photoKey]) {
-      //   console.error(`❌ No screenshot available for round ${currentRound}`);
-      // }
 
       if (currentRound === 1) {
         console.log('Transitioning to recovery phase');
@@ -269,7 +245,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         setTimeRemaining(10);
         setProgressPercent(0);
         
-        // Trigger recovery announcement immediately
         setTimeout(() => {
           if (!hasSpokenRecovery) {
             playAnnouncement('Recover and Repeat Stronger');
@@ -277,19 +252,20 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           }
         }, 500);
       } else {
-        console.log('Challenge completed, transitioning to grid');
+        // PERBAIKAN #1: Setelah round 2, pergi ke take-picture dulu
+        console.log('Round 2 complete, transitioning to take-picture phase');
         if (!hasSpokenCongratulations) {
           playAnnouncement('Congratulations! You finished your challenge!');
           setHasSpokenCongratulations(true);
         }
         setTimeout(() => {
-          setPhase('grid');
-        }, 3000);
+          setPhase('take-picture');
+          setTimeRemaining(3); // Countdown 3 detik untuk ambil foto
+        }, 1000);
       }
       
     } else if (phase === 'recovery') {
       console.log('Recovery phase complete, transitioning to position-before-recovery');
-      // takeScreenshot('recovery');
       setProgressPercent(100);
       
       setTimeout(() => {
@@ -305,7 +281,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         setPhase('go');
         setCurrentRound(2);
         
-        // Play GO announcement for round 2
         setTimeout(() => {
           playAnnouncement('Round Two, GO!');
         }, 100);
@@ -317,7 +292,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           squatCounterRef.current.resetCount();
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
-          // ✅ Reset last frame buffer untuk round 2
           lastFrameRef.current = null;
         }, 2000);
       }, 1000);
@@ -339,7 +313,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       return;
     }
 
-    // Proper canvas sizing
     const videoRect = video.getBoundingClientRect();
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -364,17 +337,14 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       if (results.landmarks && results.landmarks.length > 0) {
         const landmarks = results.landmarks[0];
         
-        // Handle position validation phase - simplified
         if (phase === 'position-before-hydrate' || phase === 'position-before-recovery') {
           const validation = positionValidatorRef.current.validatePosition(landmarks);
           setPositionValidation(validation);
           
-          // Simplified position confirmation
           if (validation.isValid && !isPositionConfirmed) {
             console.log('Position confirmed, starting transition...');
             setIsPositionConfirmed(true);
             
-            // Trigger phase completion after delay
             setTimeout(() => {
               console.log('Triggering handlePhaseComplete from position validation');
               handlePhaseComplete(); 
@@ -382,14 +352,11 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           }
         }
         
-        // Handle exercise phase
         if (phase === 'exercise') {
-          // Draw skeleton
           const drawingUtils = new DrawingUtils(canvasCtx);
           drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, { color: '#FFFFFF', lineWidth: 2 });
           drawingUtils.drawLandmarks(landmarks, { color: '#FFFFFF', radius: 4 });
           
-          // ✅ NEW: Simpan current frame sebagai last frame (untuk fallback)
           try {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = video.videoWidth;
@@ -403,20 +370,12 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             console.error('Error capturing last frame:', error);
           }
           
-          // Process squat counting
           const result = squatCounterRef.current.processPose(landmarks);
-          
-          // if (result.isSquatDown && !hasSquatPhoto[`round${currentRound}` as keyof SquatPhotoStatus]) {
-          //   const photoType: PhotoType = currentRound === 1 ? 'round1Squat' : 'round2Squat';
-          //   takeScreenshot(photoType);
-          //   setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: true }));
-          // }
           
           if (result.newCount) {
             setSquatCount(result.count);
             setTotalSquats(prev => prev + 1);
             
-            // Play count sound immediately without delay
             playCountSound(result.count).catch(error => {
               console.error('Error playing count sound:', error);
             });
@@ -451,7 +410,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       setIsPositionConfirmed(false);
       positionValidatorRef.current.reset();
       setBodyOutlineKey(prev => prev + 1);
-      stopAllAudio(); // Clear any pending audio
+      stopAllAudio();
     }
   }, [phase]);
 
@@ -527,7 +486,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
         clearInterval(interval);
       };
     } else if (phase === 'take-picture') {
-      // Timer untuk take-picture phase
+      // PERBAIKAN #1: Timer untuk take-picture phase
       const interval = setInterval(() => {
         setTimeRemaining(prev => {
           console.log(`Take-picture timer tick: ${prev - 1}`);
@@ -544,7 +503,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             
             setTimeout(() => {
               setPhase('grid');
-            }, 100);
+            }, 500);
             
             return 0;
           }
@@ -565,11 +524,9 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
     
     if (isFpsCompatible) {
       try {
-        // Force enable audio immediately when continue is clicked
         await enableAudio();
         console.log('Audio enabled successfully on continue');
         
-        // Play immediate welcome sound
         setTimeout(() => {
           playAnnouncement('Challenge starting, get ready');
         }, 300);
@@ -605,14 +562,7 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
 
   return (
     <div 
-      className="w-full bg-black text-white flex flex-col" 
-      // style={{ 
-      //   maxWidth: '430px', 
-      //   margin: "0 auto",
-      //   minHeight: '100vh',
-      //   height: '100vh', // Tambahkan height eksplisit untuk konsistensi Safari
-      //   overflow: 'hidden' // Cegah scrolling yang tidak diinginkan
-      // }}
+      className="w-full bg-black text-white flex flex-col"
     >
       {phase === 'setup' && (
         <SetupPage
@@ -658,7 +608,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             progressPercent={progressPercent}
           />
           
-          {/* Progress Bar */}
           <div className="mx-4 flex-shrink-0">
             <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
               <div 
@@ -680,7 +629,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             progressPercent={progressPercent}
           />
           
-          {/* Progress Bar */}
           <div className="mx-4 flex-shrink-0">
             <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
               <div 
@@ -703,7 +651,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             squatCount={squatCount}
           />
           
-          {/* Progress Bar */}
           <div className="mx-4 flex-shrink-0">
             <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
               <div 
@@ -724,7 +671,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
             canvasRef={canvasRef}
           />
           
-          {/* Progress Bar */}
           <div className="mx-4 flex-shrink-0">
             <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
               <div 
