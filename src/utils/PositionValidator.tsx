@@ -1,5 +1,3 @@
-import { playAnnouncement } from './AudioUtils';
-
 interface Landmark {
   x: number;
   y: number;
