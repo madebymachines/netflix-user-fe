@@ -3,6 +3,7 @@ import "./globals.css";
 // import { urw, gravtrac, vancouver, vancouverGothic } from "./fonts";
 import DesktopGate from "@/components/DesktopGate";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
+import Analytics from "@/components/Analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <Analytics />
+      </head>
       <body
         // className={`${urw.variable} ${gravtrac.variable} ${vancouver.variable} ${vancouverGothic.variable} bg-black antialiased`}
         className="bg-black antialiased"
