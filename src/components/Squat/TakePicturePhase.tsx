@@ -11,7 +11,7 @@ const TakePicturePhase: React.FC<TakePicturePhaseProps> = ({
   canvasRef,
 }) => {
   const [showCaptureFlash, setShowCaptureFlash] = useState(false);
-  const [countdown, setCountdown] = useState<number>(5);
+  const [countdown, setCountdown] = useState<number>(10);
   const captureFlashRef = useRef<HTMLDivElement>(null);
 
   // Play camera shutter sound
