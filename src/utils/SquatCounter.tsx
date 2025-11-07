@@ -1,4 +1,3 @@
-// Interface for landmark data
 interface Landmark {
   x: number;
   y: number;
@@ -6,7 +5,6 @@ interface Landmark {
   visibility: number;
 }
 
-// Interface for squat counter result
 interface SquatCounterResult {
   count: number;
   alert?: string;
@@ -14,25 +12,24 @@ interface SquatCounterResult {
   newCount?: boolean;
 }
 
-// Simplified Squat Counter Class with Better Validation
 export class SquatCounter {
   private count: number = 0;
   private isDown: boolean = false;
   private stateFrames: number = 0;
   private readonly minFrames: number = 2;
   
-  // More tolerant thresholds
-  private readonly downKneeAngleThreshold: number = 150; // Increased from 135
-  private readonly upKneeAngleThreshold: number = 165;   // Increased from 160
+  // Adjusted thresholds
+  private readonly downKneeAngleThreshold: number = 135;
+  private readonly upKneeAngleThreshold: number = 160;
   
-  private readonly maxKneeAngleDifference: number = 30; // Increased from 25
-  private readonly minKneeBend: number = 15; // Decreased from 30
+  private readonly maxKneeAngleDifference: number = 45;  // ✅ INCREASED: Lebih toleran
+  private readonly minKneeBend: number = 20;
   
   private standingKneeAngle: number | null = null;
-  
-  // Dynamic threshold based on user's range of motion
   private userMaxSquatDepth: number | null = null;
-  private readonly adaptiveMode: boolean = true;
+  
+  // ✅ NEW: Track min depth per session untuk stabilitas
+  private minDepthThisSession: number = 180;
 
   private calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
     const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -43,36 +40,42 @@ export class SquatCounter {
     return angle;
   }
 
-  private getAdaptiveThreshold(): number {
-    if (!this.adaptiveMode || !this.standingKneeAngle || !this.userMaxSquatDepth) {
+  // ✅ SIMPLIFIED: Hapus adaptive threshold yang bermasalah
+  private getCurrentDownThreshold(): number {
+    if (this.standingKneeAngle === null) {
       return this.downKneeAngleThreshold;
     }
     
-    // Use 70% of user's maximum squat depth as threshold
-    const userRange = this.standingKneeAngle - this.userMaxSquatDepth;
-    const adaptiveThreshold = this.standingKneeAngle - (userRange * 0.7);
-    
-    // Ensure it's not too lenient (minimum 20-degree bend)
-    return Math.min(adaptiveThreshold, this.standingKneeAngle - 20);
+    // Static threshold dari standing position
+    return this.standingKneeAngle - 35; // Cukup untuk squat yang jelas
   }
 
-  private isValidSquatPosition(leftKneeAngle: number, rightKneeAngle: number, avgKneeAngle: number, landmarks: Landmark[]): boolean {
+  private isValidSquatPosition(
+    leftKneeAngle: number,
+    rightKneeAngle: number,
+    avgKneeAngle: number,
+    landmarks: Landmark[]
+  ): boolean {
     const kneeDifference = Math.abs(leftKneeAngle - rightKneeAngle);
+    
+    // ✅ RELAXED: Knee alignment tidak perlu sempurna untuk DOWN state
+    // (akan ditcheck ketat saat UP state saja)
     if (kneeDifference > this.maxKneeAngleDifference) {
       return false;
     }
 
     // Initialize standing position
     if (this.standingKneeAngle === null) {
-      if (avgKneeAngle >= 160) { // Slightly lower threshold
+      if (avgKneeAngle >= 160) {
         this.standingKneeAngle = avgKneeAngle;
+        console.log(`[SquatCounter] Standing position initialized: ${avgKneeAngle.toFixed(1)}°`);
       }
       return false;
     }
 
-    // Track user's maximum squat depth for adaptive threshold
-    if (this.userMaxSquatDepth === null || avgKneeAngle < this.userMaxSquatDepth) {
-      this.userMaxSquatDepth = avgKneeAngle;
+    // Track depth
+    if (avgKneeAngle < this.minDepthThisSession) {
+      this.minDepthThisSession = avgKneeAngle;
     }
 
     const kneeBend = this.standingKneeAngle - avgKneeAngle;
@@ -80,56 +83,23 @@ export class SquatCounter {
       return false;
     }
 
-    // Relaxed landmark visibility check
+    // ✅ SIMPLIFIED: Hanya check critical landmarks
     const leftKnee = landmarks[25];
     const rightKnee = landmarks[26];
     const leftHip = landmarks[23];
     const rightHip = landmarks[24];
-    const leftShoulder = landmarks[11];
-    const rightShoulder = landmarks[12];
     
-    // Lower visibility requirement
-    if (leftKnee.visibility < 0.3 || rightKnee.visibility < 0.3) {
-      return false;
-    }
-    
-    // Check if knees are positioned below hips
-    if (leftKnee.y <= leftHip.y || rightKnee.y <= rightHip.y) {
-      return false;
-    }
-    
-    // More lenient horizontal distance check
-    const leftHorizontalDistance = Math.abs(leftKnee.x - leftHip.x);
-    const rightHorizontalDistance = Math.abs(rightKnee.x - rightHip.x);
-    const minHorizontalDistance = 0.03; // Reduced from 0.05
-    
-    if (leftHorizontalDistance < minHorizontalDistance || rightHorizontalDistance < minHorizontalDistance) {
+    if (!leftKnee || !rightKnee || !leftHip || !rightHip) {
       return false;
     }
 
-    // More lenient body width check
-    const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
-    const hipWidth = Math.abs(leftHip.x - rightHip.x);
-    
-    const minBodyWidth = 0.05; // Reduced from 0.08
-    if (shoulderWidth < minBodyWidth || hipWidth < minBodyWidth) {
+    // Critical check: visibility minimal
+    if (leftKnee.visibility < 0.2 || rightKnee.visibility < 0.2) {
       return false;
     }
     
-    // More lenient body alignment check
-    const shoulderCenter = (leftShoulder.x + rightShoulder.x) / 2;
-    const hipCenter = (leftHip.x + rightHip.x) / 2;
-    const bodyAlignment = Math.abs(shoulderCenter - hipCenter);
-    
-    const maxBodyMisalignment = 0.15; // Increased from 0.1
-    if (bodyAlignment > maxBodyMisalignment) {
-      return false;
-    }
-    
-    // More lenient knee height difference
-    const kneeHeightDifference = Math.abs(leftKnee.y - rightKnee.y);
-    const maxKneeHeightDiff = 0.08; // Increased from 0.05
-    if (kneeHeightDifference > maxKneeHeightDiff) {
+    // Critical check: knees di bawah hips
+    if (leftKnee.y <= leftHip.y || rightKnee.y <= rightHip.y) {
       return false;
     }
 
@@ -138,7 +108,7 @@ export class SquatCounter {
 
   processPose(landmarks: Landmark[]): SquatCounterResult {
     if (!landmarks || landmarks.length < 33) {
-      return { count: this.count, alert: "No landmarks detected" };
+      return { count: this.count };
     }
 
     const leftHip = landmarks[23];
@@ -149,15 +119,19 @@ export class SquatCounter {
     const rightAnkle = landmarks[28];
 
     if (!leftHip || !leftKnee || !leftAnkle || !rightHip || !rightKnee || !rightAnkle) {
-      return { count: this.count, alert: "Key landmarks missing" };
+      return { count: this.count };
     }
 
-    // Lower visibility requirement
-    const minVisibility = 0.15; // Reduced from 0.2
-    if (leftHip.visibility < minVisibility || leftKnee.visibility < minVisibility || 
-        leftAnkle.visibility < minVisibility || rightHip.visibility < minVisibility || 
-        rightKnee.visibility < minVisibility || rightAnkle.visibility < minVisibility) {
-      return { count: this.count, alert: "Low landmark visibility" };
+    const minVisibility = 0.15;
+    if (
+      leftHip.visibility < minVisibility ||
+      leftKnee.visibility < minVisibility ||
+      leftAnkle.visibility < minVisibility ||
+      rightHip.visibility < minVisibility ||
+      rightKnee.visibility < minVisibility ||
+      rightAnkle.visibility < minVisibility
+    ) {
+      return { count: this.count };
     }
 
     const leftKneeAngle = this.calculateAngle(leftHip, leftKnee, leftAnkle);
@@ -165,37 +139,47 @@ export class SquatCounter {
     const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
     const kneeDifference = Math.abs(leftKneeAngle - rightKneeAngle);
 
-    // Update standing position with more lenient threshold
-    if (avgKneeAngle >= 160 && kneeDifference < 20) {
+    // Update standing position
+    if (avgKneeAngle >= 160 && kneeDifference < 25) {
       this.standingKneeAngle = avgKneeAngle;
     }
 
-    // Use adaptive threshold
-    const currentDownThreshold = this.getAdaptiveThreshold();
+    const currentDownThreshold = this.getCurrentDownThreshold();
 
+    // ✅ DOWN STATE: Check valid squat position
     if (!this.isDown && avgKneeAngle <= currentDownThreshold) {
       if (this.isValidSquatPosition(leftKneeAngle, rightKneeAngle, avgKneeAngle, landmarks)) {
         this.stateFrames++;
         if (this.stateFrames >= this.minFrames) {
           this.isDown = true;
           this.stateFrames = 0;
+          console.log(
+            `[SquatCounter] DOWN: angle=${avgKneeAngle.toFixed(1)}°, ` +
+            `diff=${kneeDifference.toFixed(1)}°, standing=${this.standingKneeAngle?.toFixed(1)}`
+          );
           return { count: this.count, isSquatDown: true };
         }
       } else {
         this.stateFrames = 0;
       }
-    } 
+    }
+    // ✅ UP STATE: SIMPLIFIED - hanya check angle, tidak perlu perfect alignment
     else if (this.isDown && avgKneeAngle >= this.upKneeAngleThreshold) {
-      if (kneeDifference <= this.maxKneeAngleDifference) {
-        this.stateFrames++;
-        if (this.stateFrames >= this.minFrames) {
-          this.isDown = false;
-          this.count++;
-          this.stateFrames = 0;
-          return { count: this.count, newCount: true };
-        }
-      } else {
+      // ✅ CRITICAL FIX: Jangan reset stateFrames jika alignment sedikit off
+      // Fokus hanya pada knee angle yang naik
+      this.stateFrames++;
+      
+      if (this.stateFrames >= this.minFrames) {
+        this.isDown = false;
+        this.count++;
         this.stateFrames = 0;
+        
+        console.log(
+          `[SquatCounter] ✓ COUNT #${this.count}: angle=${avgKneeAngle.toFixed(1)}°, ` +
+          `diff=${kneeDifference.toFixed(1)}°, depth_reached=${this.minDepthThisSession.toFixed(1)}°`
+        );
+        
+        return { count: this.count, newCount: true };
       }
     } else {
       this.stateFrames = 0;
@@ -210,5 +194,6 @@ export class SquatCounter {
     this.stateFrames = 0;
     this.standingKneeAngle = null;
     this.userMaxSquatDepth = null;
+    this.minDepthThisSession = 180;
   }
 }
