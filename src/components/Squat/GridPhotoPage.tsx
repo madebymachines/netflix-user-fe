@@ -157,30 +157,35 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, statsStartY, canvas.width, statsHeight);
       
-      // PERBAIKAN 1: Ubah positioning untuk left-aligned
-      const leftMargin = 30;  // Margin dari kiri
-      const statsY = statsStartY + 50; // Vertikal center stats
+      // PERBAIKAN: Setup positioning
+      const leftMargin = 40;  // Margin dari kiri untuk angka
+      const statsY = statsStartY + 55; // Vertikal center untuk angka
       
       // Draw squat count (angka merah)
       ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 80px "URW Geometric"';
+      ctx.font = 'bold 90px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       const countText = totalSquats.toString();
       ctx.fillText(countText, leftMargin, statsY);
 
-      // PERBAIKAN 2: SQUATS label di sebelah kanan angka (horizontal, bukan vertical)
+      // PERBAIKAN 1: SQUATS label VERTICAL (rotated) - di sebelah kanan angka, posisi ke atas
+      ctx.save();
       ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 16px "URW Geometric"';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      const squatsLabelX = leftMargin + (countText.length > 2 ? 95 : 80);
-      const squatsLabelY = statsY - 35; // Di atas angka
-      ctx.fillText('SQUATS', squatsLabelX, squatsLabelY);
+      ctx.font = 'bold 18px "URW Geometric"';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Posisi X: di sebelah kanan angka, Y: lebih ke atas (bukan di tengah)
+      const squatsX = leftMargin + 100;
+      const squatsY = statsStartY + 25; // Ke atas, bukan di tengah
+      ctx.translate(squatsX, squatsY);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('SQUATS', 0, 0);
+      ctx.restore();
 
       // Draw slash separator
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 70px "URW Geometric"';
+      ctx.font = 'bold 75px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const slashX = canvas.width / 2 + 10;
@@ -188,20 +193,25 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
 
       // Draw 100 (target) - putih
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 80px "URW Geometric"';
+      ctx.font = 'bold 90px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       const hundredX = slashX + 50;
       ctx.fillText('100', hundredX, statsY);
 
-      // PERBAIKAN 3: SECONDS label di sebelah kanan 100 (horizontal)
+      // PERBAIKAN 2: SECONDS label VERTICAL (rotated) - di sebelah kanan 100, posisi ke atas
+      ctx.save();
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 16px "URW Geometric"';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      const secondsLabelX = hundredX + 95;
-      const secondsLabelY = statsY - 35; // Di atas angka (sama height dengan SQUATS)
-      ctx.fillText('SECONDS', secondsLabelX, secondsLabelY);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Posisi X: di sebelah kanan 100, Y: lebih ke atas (sama seperti SQUATS)
+      const secondsX = hundredX + 110;
+      const secondsY = statsStartY + 25; // Ke atas, bukan di tengah
+      ctx.translate(secondsX, secondsY);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('SECONDS', 0, 0);
+      ctx.restore();
       
       const dataURL = canvas.toDataURL('image/png');
       setGridImage(dataURL);

@@ -20,7 +20,7 @@ export class SquatCounter {
   private count: number = 0;
   private isDown: boolean = false;
   private stateFrames: number = 0;
-  private readonly minFrames: number = 5; // Increased from 2 for stability
+  private readonly minFrames: number = 3; // Increased from 2 for stability
   
   // PERBAIKAN 1: Threshold yang lebih toleran
   private readonly downKneeAngleThreshold: number = 130; // Turun dari 150
