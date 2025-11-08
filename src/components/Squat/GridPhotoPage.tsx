@@ -169,45 +169,45 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       const countText = totalSquats.toString();
       ctx.fillText(countText, leftMargin, statsY);
 
-      // PERBAIKAN 1: SQUATS label VERTICAL (rotated) - di sebelah kanan angka, posisi ke atas
+      // PERBAIKAN 1: SQUATS label VERTICAL (rotated) - sejajar dengan angka
       ctx.save();
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 18px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Posisi X: di sebelah kanan angka, Y: lebih ke atas (bukan di tengah)
-      const squatsX = leftMargin + 100;
-      const squatsY = statsStartY + 25; // Ke atas, bukan di tengah
+      // Posisi X: di sebelah kanan angka, Y: sejajar dengan angka (statsY)
+      const squatsX = leftMargin + 105;
+      const squatsY = statsY; // Sejajar dengan angka, bukan di atas
       ctx.translate(squatsX, squatsY);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
       ctx.restore();
 
-      // Draw slash separator
+      // Draw slash separator - geser ke kiri
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 75px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const slashX = canvas.width / 2 + 10;
+      const slashX = canvas.width / 2 - 15; // Geser ke kiri dari 10 jadi -15
       ctx.fillText('/', slashX, statsY);
 
-      // Draw 100 (target) - putih
+      // Draw 100 (target) - putih, geser ke kiri agar ada jarak dari SECONDS
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 90px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      const hundredX = slashX + 50;
+      const hundredX = slashX + 35; // Kurangi dari 50 jadi 35 agar lebih ke kiri
       ctx.fillText('100', hundredX, statsY);
 
-      // PERBAIKAN 2: SECONDS label VERTICAL (rotated) - di sebelah kanan 100, posisi ke atas
+      // PERBAIKAN 2: SECONDS label VERTICAL (rotated) - sejajar dengan angka
       ctx.save();
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 16px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Posisi X: di sebelah kanan 100, Y: lebih ke atas (sama seperti SQUATS)
-      const secondsX = hundredX + 110;
-      const secondsY = statsStartY + 25; // Ke atas, bukan di tengah
+      // Posisi X: di sebelah kanan 100, Y: sejajar dengan angka (statsY)
+      const secondsX = hundredX + 105; // Sesuaikan jarak dari 110 jadi 105
+      const secondsY = statsY; // Sejajar dengan angka, bukan di atas
       ctx.translate(secondsX, secondsY);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
