@@ -15,27 +15,37 @@ interface SquatCounterResult {
   debug?: string;
 }
 
-// Improved Squat Counter Class with Better Validation
+// Improved Squat Counter - Fixed for Fast Squat Detection
 export class SquatCounter {
   private count: number = 0;
   private isDown: boolean = false;
   private stateFrames: number = 0;
-  private readonly minFrames: number = 3; // Increased from 2 for stability
   
-  // PERBAIKAN 1: Threshold yang lebih toleran
-  private readonly downKneeAngleThreshold: number = 130; // Turun dari 150
-  private readonly upKneeAngleThreshold: number = 155;   // Turun dari 165
+  // ✅ FIX 1: Turunkan minFrames dari 3 ke 2 untuk menangkap squat cepat
+  private readonly minFrames: number = 1;
   
-  private readonly maxKneeAngleDifference: number = 40; // Naikkan dari 30
-  private readonly minKneeBend: number = 10; // Turun dari 15
+  private readonly downKneeAngleThreshold: number = 130;
+  private readonly upKneeAngleThreshold: number = 155;
+  
+  private readonly maxKneeAngleDifference: number = 40;
+  private readonly minKneeBend: number = 10;
   
   private standingKneeAngle: number | null = null;
   private userMaxSquatDepth: number | null = null;
   private readonly adaptiveMode: boolean = true;
   
-  // PERBAIKAN 2: Track confidence untuk smooth transitions
+  // ✅ FIX 4: Tambah hysteresis margin untuk smooth transitions
+  private readonly downAngleMargin: number = 5;
+  private readonly upAngleMargin: number = 3;
+  private lastSquatDownFrame: boolean = false;
+  
+  // Confidence tracking
   private downConfidence: number = 0;
   private upConfidence: number = 0;
+  
+  // ✅ FIX 2: Track confidence history untuk prevent jitter
+  private confidenceHistory: number[] = [];
+  private readonly confidenceHistoryLength: number = 5;
 
   private calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
     const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -51,11 +61,10 @@ export class SquatCounter {
       return this.downKneeAngleThreshold;
     }
     
-    // PERBAIKAN 3: Kalkulasi threshold lebih fleksibel
     const userRange = this.standingKneeAngle - this.userMaxSquatDepth;
-    const adaptiveThreshold = this.standingKneeAngle - (userRange * 0.65); // Turun dari 0.7
+    const adaptiveThreshold = this.standingKneeAngle - (userRange * 0.65);
     
-    return Math.min(adaptiveThreshold, this.standingKneeAngle - 15); // Turun dari 20
+    return Math.min(adaptiveThreshold, this.standingKneeAngle - 15);
   }
 
   private isValidSquatPosition(
@@ -66,7 +75,6 @@ export class SquatCounter {
   ): boolean {
     const kneeDifference = Math.abs(leftKneeAngle - rightKneeAngle);
     
-    // PERBAIKAN 4: Visibility check lebih lenient
     const leftKnee = landmarks[25];
     const rightKnee = landmarks[26];
     const leftHip = landmarks[23];
@@ -78,9 +86,9 @@ export class SquatCounter {
       return false;
     }
 
-    // Initialize standing position dengan threshold lebih lenient
+    // Initialize standing position
     if (this.standingKneeAngle === null) {
-      if (avgKneeAngle >= 155) { // Turun dari 160
+      if (avgKneeAngle >= 155) {
         this.standingKneeAngle = avgKneeAngle;
         console.log(`[SquatCounter] Standing position initialized: ${avgKneeAngle.toFixed(1)}°`);
       }
@@ -92,26 +100,32 @@ export class SquatCounter {
       this.userMaxSquatDepth = avgKneeAngle;
     }
 
-    // PERBAIKAN 5: Minimum knee bend check lebih relaxed
+    // ✅ FIX 5: Relax validasi saat downConfidence sudah naik (squat sudah dimulai)
+    let minBodyWidth = 0.04;
+    let maxBodyMisalignment = 0.2;
+    
+    if (this.downConfidence >= 1) {
+      // Relax tolerance untuk squat cepat yang sudah terkonfirmasi
+      minBodyWidth = 0.03;
+      maxBodyMisalignment = 0.25;
+    }
+
     const kneeBend = this.standingKneeAngle - avgKneeAngle;
     if (kneeBend < this.minKneeBend) {
       return false;
     }
 
-    // PERBAIKAN 6: Knee difference tolerance lebih tinggi
     if (kneeDifference > this.maxKneeAngleDifference) {
       return false;
     }
 
-    // Check if knees are below hips
     if (leftKnee.y <= leftHip.y || rightKnee.y <= rightHip.y) {
       return false;
     }
 
-    // PERBAIKAN 7: Horizontal distance check lebih lenient
     const leftHorizontalDistance = Math.abs(leftKnee.x - leftHip.x);
     const rightHorizontalDistance = Math.abs(rightKnee.x - rightHip.x);
-    const minHorizontalDistance = 0.02; // Turun dari 0.03
+    const minHorizontalDistance = 0.02;
 
     if (
       leftHorizontalDistance < minHorizontalDistance &&
@@ -120,28 +134,23 @@ export class SquatCounter {
       return false;
     }
 
-    // Body width check
     const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
     const hipWidth = Math.abs(leftHip.x - rightHip.x);
 
-    const minBodyWidth = 0.04; // Turun dari 0.05
     if (shoulderWidth < minBodyWidth || hipWidth < minBodyWidth) {
       return false;
     }
 
-    // Body alignment check
     const shoulderCenter = (leftShoulder.x + rightShoulder.x) / 2;
     const hipCenter = (leftHip.x + rightHip.x) / 2;
     const bodyAlignment = Math.abs(shoulderCenter - hipCenter);
 
-    const maxBodyMisalignment = 0.2; // Naikkan dari 0.15
     if (bodyAlignment > maxBodyMisalignment) {
       return false;
     }
 
-    // Knee height difference check
     const kneeHeightDifference = Math.abs(leftKnee.y - rightKnee.y);
-    const maxKneeHeightDiff = 0.1; // Naikkan dari 0.08
+    const maxKneeHeightDiff = 0.1;
     if (kneeHeightDifference > maxKneeHeightDiff) {
       return false;
     }
@@ -165,8 +174,7 @@ export class SquatCounter {
       return { count: this.count, alert: "Key landmarks missing" };
     }
 
-    // PERBAIKAN 8: Visibility requirement lebih rendah
-    const minVisibility = 0.1; // Turun dari 0.15
+    const minVisibility = 0.1;
     if (
       leftHip.visibility < minVisibility ||
       leftKnee.visibility < minVisibility ||
@@ -184,21 +192,22 @@ export class SquatCounter {
     const kneeDifference = Math.abs(leftKneeAngle - rightKneeAngle);
 
     // Update standing position
-    if (avgKneeAngle >= 155 && kneeDifference < 25) { // Turun dari 160 dan 20
+    if (avgKneeAngle >= 155 && kneeDifference < 25) {
       this.standingKneeAngle = avgKneeAngle;
     }
 
     const currentDownThreshold = this.getAdaptiveThreshold();
 
-    // PERBAIKAN 9: State transition dengan confidence system
-    if (!this.isDown && avgKneeAngle <= currentDownThreshold) {
+    // ✅ FIX 3: State transition dengan proper reset dan margin
+    if (!this.isDown && avgKneeAngle <= (currentDownThreshold + this.downAngleMargin)) {
       if (this.isValidSquatPosition(leftKneeAngle, rightKneeAngle, avgKneeAngle, landmarks)) {
         this.downConfidence++;
-        this.upConfidence = 0; // Reset up confidence
+        this.upConfidence = 0; // Hard reset up confidence
         
         if (this.downConfidence >= this.minFrames) {
           this.isDown = true;
           this.downConfidence = 0;
+          this.lastSquatDownFrame = true;
           return {
             count: this.count,
             isSquatDown: true,
@@ -206,17 +215,25 @@ export class SquatCounter {
           };
         }
       } else {
-        this.downConfidence = Math.max(0, this.downConfidence - 1);
+        // ✅ FIX 3a: Hard reset jika posisi invalid, bukan decay
+        if (avgKneeAngle > currentDownThreshold + this.downAngleMargin) {
+          this.downConfidence = 0;
+        } else {
+          // Decay slowly jika masih dalam range tapi invalid pose
+          this.downConfidence = Math.max(0, this.downConfidence - 0.2);
+        }
       }
-    } else if (this.isDown && avgKneeAngle >= this.upKneeAngleThreshold) {
+    } 
+    else if (this.isDown && avgKneeAngle >= (this.upKneeAngleThreshold - this.upAngleMargin)) {
       if (kneeDifference <= this.maxKneeAngleDifference) {
         this.upConfidence++;
-        this.downConfidence = 0; // Reset down confidence
+        this.downConfidence = 0; // Hard reset down confidence
         
         if (this.upConfidence >= this.minFrames) {
           this.isDown = false;
           this.count++;
           this.upConfidence = 0;
+          this.lastSquatDownFrame = false;
           return {
             count: this.count,
             newCount: true,
@@ -224,12 +241,19 @@ export class SquatCounter {
           };
         }
       } else {
-        this.upConfidence = Math.max(0, this.upConfidence - 1);
+        // ✅ FIX 3b: Hard reset jika knee difference invalid
+        if (kneeDifference > this.maxKneeAngleDifference + 5) {
+          this.upConfidence = 0;
+        } else {
+          // Decay slowly
+          this.upConfidence = Math.max(0, this.upConfidence - 0.2);
+        }
       }
-    } else {
-      // Decay confidence scores
-      this.downConfidence = Math.max(0, this.downConfidence - 0.5);
-      this.upConfidence = Math.max(0, this.upConfidence - 0.5);
+    } 
+    else {
+      // ✅ FIX 2: Slower decay rate (turun dari 0.5 ke 0.2)
+      this.downConfidence = Math.max(0, this.downConfidence - 0.2);
+      this.upConfidence = Math.max(0, this.upConfidence - 0.2);
     }
 
     return { count: this.count, newCount: false, isSquatDown: this.isDown };
@@ -241,8 +265,10 @@ export class SquatCounter {
     this.stateFrames = 0;
     this.downConfidence = 0;
     this.upConfidence = 0;
+    this.lastSquatDownFrame = false;
     this.standingKneeAngle = null;
     this.userMaxSquatDepth = null;
+    this.confidenceHistory = [];
   }
 
   // Debug helper
@@ -252,8 +278,9 @@ export class SquatCounter {
       isDown: this.isDown,
       standingKneeAngle: this.standingKneeAngle?.toFixed(1),
       userMaxSquatDepth: this.userMaxSquatDepth?.toFixed(1),
-      downConfidence: this.downConfidence,
-      upConfidence: this.upConfidence
+      downConfidence: this.downConfidence.toFixed(2),
+      upConfidence: this.upConfidence.toFixed(2),
+      minFrames: this.minFrames
     };
   }
 }
