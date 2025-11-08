@@ -93,7 +93,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
     await loadFonts();
     
     canvas.width = 400;
-    canvas.height = 700;  // Adjusted untuk stats section terlihat
+    canvas.height = 700;
     
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -119,7 +119,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       const photoX = 20;
       const photoY = 100;
       const photoWidth = canvas.width - 40;
-      const photoHeight = (photoWidth * 4) / 3;  // Keep original ratio
+      const photoHeight = (photoWidth * 4) / 3;
 
       if (photo && photo.trim() !== '') {
         try {
@@ -149,60 +149,59 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
         ctx.fillText('Photo not available', canvas.width / 2, photoY + photoHeight / 2);
       }
 
-      // Draw stats section at bottom - FIX: Hitung dari photo yang sebenarnya
-      const photoEndY = photoY + photoHeight;  // Dimana photo berakhir
-      const statsStartY = photoEndY + 10;     // Stats mulai 10px setelah photo
+      // Draw stats section at bottom
+      const photoEndY = photoY + photoHeight;
+      const statsStartY = photoEndY + 10;
       const statsHeight = 110;
       
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, statsStartY, canvas.width, statsHeight);
       
-      const statsCenterX = canvas.width / 2;
-      const statsCenterY = statsStartY + 55;  // Centered dalam stats section
+      // PERBAIKAN 1: Ubah positioning untuk left-aligned
+      const leftMargin = 30;  // Margin dari kiri
+      const statsY = statsStartY + 50; // Vertikal center stats
       
-      // Draw squat count
+      // Draw squat count (angka merah)
       ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 90px "URW Geometric"';
-      ctx.textAlign = 'right';
+      ctx.font = 'bold 80px "URW Geometric"';
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       const countText = totalSquats.toString();
-      ctx.fillText(countText, statsCenterX - 70, statsCenterY + 15);
+      ctx.fillText(countText, leftMargin, statsY);
 
-      // Draw SQUATS label (vertical)
-      ctx.save();
+      // PERBAIKAN 2: SQUATS label di sebelah kanan angka (horizontal, bukan vertical)
       ctx.fillStyle = '#ff0000';
-      ctx.font = 'bold 18px "URW Geometric"';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX - 50, statsCenterY + 20);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText('SQUATS', 0, 0);
-      ctx.restore();
+      ctx.font = 'bold 16px "URW Geometric"';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const squatsLabelX = leftMargin + (countText.length > 2 ? 95 : 80);
+      const squatsLabelY = statsY - 35; // Di atas angka
+      ctx.fillText('SQUATS', squatsLabelX, squatsLabelY);
 
       // Draw slash separator
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 75px "URW Geometric"';
+      ctx.font = 'bold 70px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('/', statsCenterX + 10, statsCenterY + 15);
+      const slashX = canvas.width / 2 + 10;
+      ctx.fillText('/', slashX, statsY);
 
-      // Draw 100 (target)
+      // Draw 100 (target) - putih
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 90px "URW Geometric"';
+      ctx.font = 'bold 80px "URW Geometric"';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText('100', statsCenterX + 40, statsCenterY + 15);
+      const hundredX = slashX + 50;
+      ctx.fillText('100', hundredX, statsY);
 
-      // Draw SECONDS label (vertical)
-      ctx.save();
+      // PERBAIKAN 3: SECONDS label di sebelah kanan 100 (horizontal)
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 16px "URW Geometric"';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.translate(statsCenterX + 165, statsCenterY + 20);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText('SECONDS', 0, 0);
-      ctx.restore();
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const secondsLabelX = hundredX + 95;
+      const secondsLabelY = statsY - 35; // Di atas angka (sama height dengan SQUATS)
+      ctx.fillText('SECONDS', secondsLabelX, secondsLabelY);
       
       const dataURL = canvas.toDataURL('image/png');
       setGridImage(dataURL);
