@@ -322,10 +322,6 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
               const actualCount = round2Count;
               const centerY = counterAreaY + counterAreaHeight/2;
               
-              // Tambahkan background semi-transparan untuk round 2
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-              ctx.fillRect(x, y + photoHeight * 0.5, photoWidth, photoHeight * 0.5);
-              
               ctx.save();
               ctx.fillStyle = '#FFFFFF';
               ctx.font = 'bold 14px "URW Geometric"';
