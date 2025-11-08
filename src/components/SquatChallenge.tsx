@@ -277,6 +277,10 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
       
     } else if (phase === 'position-before-recovery') {
       console.log('Position before recovery complete, starting round 2');
+
+      squatCounterRef.current.resetCount();
+      console.log('[DEBUG] SquatCounter reset for round 2');
+
       setTimeout(() => {
         setPhase('go');
         setCurrentRound(2);
@@ -289,7 +293,6 @@ const SquatChallengeApp: React.FC<SquatChallengeAppProps> = ({ onBack, onHideLog
           setPhase('exercise');
           setTimeRemaining(50);
           setProgressPercent(0);
-          squatCounterRef.current.resetCount();
           setSquatCount(0);
           setHasSquatPhoto(prev => ({ ...prev, [`round${currentRound}`]: false }));
           lastFrameRef.current = null;
