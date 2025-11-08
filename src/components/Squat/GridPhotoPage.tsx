@@ -159,7 +159,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       
       // PERBAIKAN: Setup positioning
       const leftMargin = 30;  
-      const statsY = statsStartY + 45;
+      const statsY = statsStartY + 55;
 
       ctx.fillStyle = '#ff0000';
       ctx.font = 'bold 90px "URW Geometric"';
@@ -174,7 +174,7 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const squatsX = leftMargin + 105;
-      const squatsY = statsY; 
+      const squatsY = statsY + 25; 
       ctx.translate(squatsX, squatsY);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SQUATS', 0, 0);
@@ -199,8 +199,8 @@ const GridPhotoPage: React.FC<GridPhotoPageProps> = ({
       ctx.font = 'bold 16px "URW Geometric"';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const secondsX = hundredX + 120; 
-      const secondsY = statsY;
+      const secondsX = hundredX + 140; 
+      const secondsY = statsY + 25;
       ctx.translate(secondsX, secondsY);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText('SECONDS', 0, 0);
